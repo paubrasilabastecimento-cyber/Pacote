@@ -18,12 +18,16 @@ import {
 } from 'lucide-react';
 
 export const StandaloneTreeView: React.FC = () => {
-  const { trocaPlanilhaItens, nomeArquivoTroca, reloadData } = useApp();
+  const { trocaPlanilhaItens, nomeArquivoTroca } = useApp();
   const itens: ItemPlanilha[] = trocaPlanilhaItens || DADOS_PLANILHA_DEMO;
 
   const analise = useMemo(() => {
     return analisarDadosPlanilha(itens);
   }, [itens]);
+
+  const handleReload = () => {
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-sky-500 selection:text-slate-950 flex flex-col p-3 sm:p-5 md:p-6 space-y-4">
@@ -88,7 +92,7 @@ export const StandaloneTreeView: React.FC = () => {
 
           {/* Refresh Action */}
           <button
-            onClick={() => reloadData()}
+            onClick={handleReload}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition-all cursor-pointer shadow-sm"
             title="Recarregar dados do servidor"
           >

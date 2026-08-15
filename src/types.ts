@@ -66,6 +66,7 @@ export interface PlanoAcao {
 }
 
 export interface KPIStats {
+  id?: string;
   mes: string;
   wqiMeta: number; // ex: 98.5%
   wqiAtual: number;
@@ -111,7 +112,7 @@ export interface RegistroTrocaImproprio {
   data: string;
   mesRef: string;
   pdv?: string;
-  canal: 'Rota Tradicional' | 'Rota AS / Supermercados' | 'Bares e Eventos' | 'Armazém / Transferência';
+  canal: string;
   produto: string;
   codProduto?: number | string;
   categoria?: string;
@@ -119,18 +120,10 @@ export interface RegistroTrocaImproprio {
   unidade: string;
   hlTrocado: number;
   valorR$: number;
-  motivoImproprio:
-    | 'Validade Vencida (Shelf Life)'
-    | 'Vazamento / Perda de Gás'
-    | 'Oxidação de Tampa / Ferrugem'
-    | 'Sedimento / Turvação'
-    | 'Lata Furada / Estufada'
-    | 'Garrafa Lascada / Microfissura'
-    | 'Rótulo Danificado / Falha Lacre'
-    | 'Outro Defeito de Qualidade';
+  motivoImproprio: string;
   lote?: string;
   fabricante?: string;
-  destino: 'Despejo / Descarte Controlado' | 'Reciclagem Vidro/Lata' | 'Devolução Fábrica (Laudo)';
+  destino: string;
   responsavel: string;
   observacao?: string;
   createdAt: string;

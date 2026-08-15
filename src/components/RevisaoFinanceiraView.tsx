@@ -191,7 +191,7 @@ export const RevisaoFinanceiraView: React.FC = () => {
                   return (
                     <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-3.5 shadow-2xl min-w-[240px] text-xs font-sans ring-1 ring-white/10">
                       <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                        <span className="font-bold text-white text-sm">{formatMesAno(label)}</span>
+                        <span className="font-bold text-white text-sm">{formatMesAno(String(label ?? ''))}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDentro ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'}`}>
                           {isDentro ? 'Dentro da Meta' : 'Acima da Meta'}
                         </span>

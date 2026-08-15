@@ -473,7 +473,7 @@ export const AnaliseCausasView: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   outerRadius={70}
-                  label={(entry) => entry.turno}
+                  label={(entry: any) => entry.turno || ''}
                 >
                   {turnoData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

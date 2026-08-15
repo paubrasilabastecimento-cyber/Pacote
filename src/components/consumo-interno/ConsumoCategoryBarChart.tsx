@@ -149,7 +149,7 @@ export const ConsumoCategoryBarChart: React.FC<ConsumoCategoryBarChartProps> = (
               <Bar
                 dataKey="total"
                 radius={[0, 6, 6, 0]}
-                onClick={(entry) => onSelectCategory && onSelectCategory(entry.categoria)}
+                onClick={(entry: any) => onSelectCategory && onSelectCategory(entry?.categoria || '')}
                 cursor="pointer"
               >
                 {chartData.map((entry, index) => (

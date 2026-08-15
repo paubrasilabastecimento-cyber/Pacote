@@ -187,7 +187,7 @@ export const QuebrasHierarchyTree: React.FC<QuebrasHierarchyTreeProps> = ({ perd
     > = {};
 
     filteredPerdas.forEach((p, idx) => {
-      const code = p.codProduto ? String(p.codProduto).trim() : (p.codigoProduto ? String(p.codigoProduto).trim() : '');
+      const code = p.codProduto ? String(p.codProduto).trim() : ((p as any).codigoProduto ? String((p as any).codigoProduto).trim() : '');
       const prodName = (p.descricaoProduto || p.produto || `PROD_${idx}`).trim();
       const uniqueKey = code && code !== 'S/C' ? `sku_${code}` : `prod_${prodName.replace(/\s+/g, '_')}`;
 

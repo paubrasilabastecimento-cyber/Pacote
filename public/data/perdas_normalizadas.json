@@ -1,0 +1,502 @@
+[
+  {
+    "dataOperacao": "2026-01-08",
+    "emissao": "2026-01-08",
+    "produto": 18836,
+    "unidade": "cx",
+    "descricao": "CORONA EXTRA N LONG N",
+    "qtde": 1,
+    "valor": 118.01,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-01-12",
+    "emissao": "2026-01-12",
+    "produto": 21020,
+    "unidade": "cx",
+    "descricao": "BUDWEISER 350ML LATA",
+    "qtde": 12,
+    "valor": 680.40,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-01-15",
+    "emissao": "2026-01-15",
+    "produto": 18450,
+    "unidade": "cx",
+    "descricao": "STELLA ARTOIS 330ML LN",
+    "qtde": 8,
+    "valor": 733.44,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-01-18",
+    "emissao": "2026-01-18",
+    "produto": 15200,
+    "unidade": "cx",
+    "descricao": "GUARANA ANTARCTICA 2L PET",
+    "qtde": 25,
+    "valor": 720.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-01-22",
+    "emissao": "2026-01-22",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL ENERGY DRINK 250ML",
+    "qtde": 15,
+    "valor": 1980.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-01-25",
+    "emissao": "2026-01-25",
+    "produto": 77200,
+    "unidade": "cx",
+    "descricao": "AGUA MINERAL AMA S/ GAS 500ML",
+    "qtde": 40,
+    "valor": 480.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-01-28",
+    "emissao": "2026-01-28",
+    "produto": 66300,
+    "unidade": "cx",
+    "descricao": "AMENDOIM MENDORATO 500G",
+    "qtde": 10,
+    "valor": 320.00,
+    "embalagem": "PACOTE"
+  },
+  {
+    "dataOperacao": "2026-01-30",
+    "emissao": "2026-01-30",
+    "produto": 23400,
+    "unidade": "cx",
+    "descricao": "SPATEN MUNICH HELLES 355ML",
+    "qtde": 14,
+    "valor": 1327.20,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-02-03",
+    "emissao": "2026-02-03",
+    "produto": 18836,
+    "unidade": "cx",
+    "descricao": "CORONA EXTRA N LONG N",
+    "qtde": 20,
+    "valor": 2208.00,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-02-07",
+    "emissao": "2026-02-07",
+    "produto": 10500,
+    "unidade": "cx",
+    "descricao": "SKOL PILSEN 600ML RGB",
+    "qtde": 30,
+    "valor": 2448.00,
+    "embalagem": "RGB"
+  },
+  {
+    "dataOperacao": "2026-02-12",
+    "emissao": "2026-02-12",
+    "produto": 16400,
+    "unidade": "cx",
+    "descricao": "PEPSI BLACK 350ML LATA",
+    "qtde": 22,
+    "valor": 554.40,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-02-16",
+    "emissao": "2026-02-16",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL ENERGY DRINK 250ML",
+    "qtde": 18,
+    "valor": 2376.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-02-20",
+    "emissao": "2026-02-20",
+    "produto": 77210,
+    "unidade": "cx",
+    "descricao": "AGUA MIN CRYSTAL C/ GAS 500ML",
+    "qtde": 35,
+    "valor": 455.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-02-24",
+    "emissao": "2026-02-24",
+    "produto": 66310,
+    "unidade": "cx",
+    "descricao": "MENDORATO PETISCO DIVERSOS",
+    "qtde": 12,
+    "valor": 456.00,
+    "embalagem": "PACOTE"
+  },
+  {
+    "dataOperacao": "2026-02-27",
+    "emissao": "2026-02-27",
+    "produto": 22100,
+    "unidade": "cx",
+    "descricao": "BRAHMA DUPLO MALTE 350ML",
+    "qtde": 16,
+    "valor": 1094.40,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-03-04",
+    "emissao": "2026-03-04",
+    "produto": 18450,
+    "unidade": "cx",
+    "descricao": "STELLA ARTOIS 330ML LN",
+    "qtde": 15,
+    "valor": 1375.20,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-03-09",
+    "emissao": "2026-03-09",
+    "produto": 23400,
+    "unidade": "cx",
+    "descricao": "SPATEN MUNICH HELLES 355ML",
+    "qtde": 18,
+    "valor": 1706.40,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-03-14",
+    "emissao": "2026-03-14",
+    "produto": 15200,
+    "unidade": "cx",
+    "descricao": "GUARANA ANTARCTICA 350ML LATA",
+    "qtde": 28,
+    "valor": 705.60,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-03-18",
+    "emissao": "2026-03-18",
+    "produto": 15300,
+    "unidade": "cx",
+    "descricao": "SODA LIMONADA ANTARCTICA 350ML",
+    "qtde": 20,
+    "valor": 504.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-03-22",
+    "emissao": "2026-03-22",
+    "produto": 99400,
+    "unidade": "cx",
+    "descricao": "H2OH CITRUS 500ML PET",
+    "qtde": 25,
+    "valor": 750.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-03-26",
+    "emissao": "2026-03-26",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL SUGARFREE 250ML",
+    "qtde": 12,
+    "valor": 1584.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-03-30",
+    "emissao": "2026-03-30",
+    "produto": 77200,
+    "unidade": "cx",
+    "descricao": "AGUA MINERAL AMA S/ GAS 500ML",
+    "qtde": 50,
+    "valor": 600.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-04-03",
+    "emissao": "2026-04-03",
+    "produto": 18836,
+    "unidade": "cx",
+    "descricao": "CORONA EXTRA N LONG N",
+    "qtde": 22,
+    "valor": 2428.80,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-04-08",
+    "emissao": "2026-04-08",
+    "produto": 21020,
+    "unidade": "cx",
+    "descricao": "BUDWEISER 330ML LN",
+    "qtde": 16,
+    "valor": 1036.80,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-04-14",
+    "emissao": "2026-04-14",
+    "produto": 16400,
+    "unidade": "cx",
+    "descricao": "PEPSI BLACK 350ML LATA",
+    "qtde": 30,
+    "valor": 756.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-04-18",
+    "emissao": "2026-04-18",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL ENERGY DRINK 250ML",
+    "qtde": 20,
+    "valor": 2640.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-04-23",
+    "emissao": "2026-04-23",
+    "produto": 99400,
+    "unidade": "cx",
+    "descricao": "H2OH LIMONETO 500ML PET",
+    "qtde": 22,
+    "valor": 660.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-04-28",
+    "emissao": "2026-04-28",
+    "produto": 66300,
+    "unidade": "cx",
+    "descricao": "MENDORATO AMENDOIM JAPONES",
+    "qtde": 15,
+    "valor": 480.00,
+    "embalagem": "PACOTE"
+  },
+  {
+    "dataOperacao": "2026-05-04",
+    "emissao": "2026-05-04",
+    "produto": 23400,
+    "unidade": "cx",
+    "descricao": "SPATEN MUNICH HELLES 355ML",
+    "qtde": 25,
+    "valor": 2370.00,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-05-10",
+    "emissao": "2026-05-10",
+    "produto": 18450,
+    "unidade": "cx",
+    "descricao": "STELLA ARTOIS 330ML LN",
+    "qtde": 18,
+    "valor": 1650.24,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-05-15",
+    "emissao": "2026-05-15",
+    "produto": 15200,
+    "unidade": "cx",
+    "descricao": "GUARANA ANTARCTICA ZERO 350ML",
+    "qtde": 26,
+    "valor": 655.20,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-05-20",
+    "emissao": "2026-05-20",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL SUMMER EDITION 250ML",
+    "qtde": 16,
+    "valor": 2112.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-05-25",
+    "emissao": "2026-05-25",
+    "produto": 77200,
+    "unidade": "cx",
+    "descricao": "AGUA MINERAL AMA S/ GAS 500ML",
+    "qtde": 45,
+    "valor": 540.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-06-03",
+    "emissao": "2026-06-03",
+    "produto": 18836,
+    "unidade": "cx",
+    "descricao": "CORONA EXTRA N LONG N",
+    "qtde": 28,
+    "valor": 3091.20,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-06-08",
+    "emissao": "2026-06-08",
+    "produto": 21020,
+    "unidade": "cx",
+    "descricao": "BUDWEISER 350ML LATA",
+    "qtde": 20,
+    "valor": 1272.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-06-14",
+    "emissao": "2026-06-14",
+    "produto": 15300,
+    "unidade": "cx",
+    "descricao": "SODA LIMONADA 2L PET",
+    "qtde": 18,
+    "valor": 486.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-06-19",
+    "emissao": "2026-06-19",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL ENERGY DRINK 250ML",
+    "qtde": 22,
+    "valor": 2904.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-06-24",
+    "emissao": "2026-06-24",
+    "produto": 99400,
+    "unidade": "cx",
+    "descricao": "H2OH LIMONETO 500ML PET",
+    "qtde": 30,
+    "valor": 900.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-06-29",
+    "emissao": "2026-06-29",
+    "produto": 66300,
+    "unidade": "cx",
+    "descricao": "MENDORATO AMENDOIM TORRADO",
+    "qtde": 14,
+    "valor": 448.00,
+    "embalagem": "PACOTE"
+  },
+  {
+    "dataOperacao": "2026-07-04",
+    "emissao": "2026-07-04",
+    "produto": 23400,
+    "unidade": "cx",
+    "descricao": "SPATEN MUNICH HELLES 355ML",
+    "qtde": 26,
+    "valor": 2464.80,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-07-09",
+    "emissao": "2026-07-09",
+    "produto": 10500,
+    "unidade": "cx",
+    "descricao": "SKOL PILSEN 350ML LATA",
+    "qtde": 24,
+    "valor": 1468.80,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-07-15",
+    "emissao": "2026-07-15",
+    "produto": 15200,
+    "unidade": "cx",
+    "descricao": "GUARANA ANTARCTICA 2L PET",
+    "qtde": 32,
+    "valor": 921.60,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-07-21",
+    "emissao": "2026-07-21",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL ENERGY DRINK 250ML",
+    "qtde": 24,
+    "valor": 3168.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-07-26",
+    "emissao": "2026-07-26",
+    "produto": 77200,
+    "unidade": "cx",
+    "descricao": "AGUA MIN MINERAL AMA 500ML",
+    "qtde": 50,
+    "valor": 600.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-08-03",
+    "emissao": "2026-08-03",
+    "produto": 18836,
+    "unidade": "cx",
+    "descricao": "CORONA EXTRA N LONG N",
+    "qtde": 18,
+    "valor": 1987.20,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-08-06",
+    "emissao": "2026-08-06",
+    "produto": 18450,
+    "unidade": "cx",
+    "descricao": "STELLA ARTOIS 330ML LN",
+    "qtde": 14,
+    "valor": 1283.52,
+    "embalagem": "LONG NECK"
+  },
+  {
+    "dataOperacao": "2026-08-09",
+    "emissao": "2026-08-09",
+    "produto": 16400,
+    "unidade": "cx",
+    "descricao": "PEPSI BLACK 350ML LATA",
+    "qtde": 20,
+    "valor": 504.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-08-11",
+    "emissao": "2026-08-11",
+    "produto": 88100,
+    "unidade": "cx",
+    "descricao": "RED BULL ENERGY DRINK 250ML",
+    "qtde": 15,
+    "valor": 1980.00,
+    "embalagem": "LATA"
+  },
+  {
+    "dataOperacao": "2026-08-13",
+    "emissao": "2026-08-13",
+    "produto": 99400,
+    "unidade": "cx",
+    "descricao": "H2OH CITRUS 500ML PET",
+    "qtde": 16,
+    "valor": 480.00,
+    "embalagem": "PET"
+  },
+  {
+    "dataOperacao": "2026-08-14",
+    "emissao": "2026-08-14",
+    "produto": 66300,
+    "unidade": "cx",
+    "descricao": "MENDORATO AMENDOIM JAPONES",
+    "qtde": 10,
+    "valor": 320.00,
+    "embalagem": "PACOTE"
+  }
+]

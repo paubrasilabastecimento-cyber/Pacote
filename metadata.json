@@ -1,0 +1,6 @@
+{
+  "name": "Pacote Prejuízo - Gestão de Perdas Armazém AMBEV",
+  "description": "Sistema de gestão financeira do Pacote Prejuízo AMBEV, com comparativo anual Meta x Real, controle de Consumo Interno, módulo de PERDAS POR com normalização JSON, árvore hierárquica por mês e gráficos de Pareto.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

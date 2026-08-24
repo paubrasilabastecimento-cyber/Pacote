@@ -69,7 +69,14 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
     try {
       setLoading(true);
       setFeedback(null);
-      const res = await downloadPlatformBackup();
+      const res = await downloadPlatformBackup({
+        perdas,
+        acoes,
+        kpis,
+        trocasImproprio,
+        trocaPlanilhaItens,
+        nomeArquivoTroca,
+      });
       setLastSaved(new Date().toLocaleTimeString());
       setFeedback({
         tipo: 'sucesso',
@@ -91,7 +98,14 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
     try {
       setLoading(true);
       setFeedback(null);
-      const res = await saveAllPlatformDataToServer();
+      const res = await saveAllPlatformDataToServer({
+        perdas,
+        acoes,
+        kpis,
+        trocasImproprio,
+        trocaPlanilhaItens,
+        nomeArquivoTroca,
+      });
       setLastSaved(new Date().toLocaleTimeString());
       setFeedback({
         tipo: 'sucesso',

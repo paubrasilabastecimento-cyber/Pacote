@@ -14,7 +14,6 @@ import { HistoricoView } from './components/HistoricoView';
 import { TrocaProdImproprioView } from './components/TrocaProdImproprioView';
 import { ArvoreDecomposicaoView } from './components/ArvoreDecomposicaoView';
 import { StandaloneTreeView } from './components/StandaloneTreeView';
-import { ConsumoInternoView } from './components/ConsumoInternoView';
 import { PerdasPorView } from './components/PerdasPorView';
 import { ReposicaoView } from './components/ReposicaoView';
 
@@ -60,8 +59,6 @@ function MainLayout() {
         return <ReposicaoView />;
       case 'perdas-por':
         return <PerdasPorView />;
-      case 'consumo-interno':
-        return <ConsumoInternoView />;
       case 'troca-improprio':
         return <TrocaProdImproprioView />;
       case 'arvore-decomposicao':

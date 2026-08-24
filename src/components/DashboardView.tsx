@@ -14,11 +14,11 @@ import {
   TrendingDown,
   TrendingUp,
   AlertTriangle,
-  CheckCircle2,
   Calendar,
   Layers,
   ArrowRight,
   ShieldCheck,
+  CheckCircle2,
   Clock,
   Building,
   Percent,
@@ -58,7 +58,6 @@ export const DashboardView: React.FC = () => {
     currentMonthKPI,
     computedMonthKPIs,
     filteredPerdas,
-    filteredAcoes,
     setActiveTab,
     filtros,
     importBatchPerdas,
@@ -496,13 +495,6 @@ export const DashboardView: React.FC = () => {
       acumulado: Number(Math.min(100, acum).toFixed(1)),
     };
   });
-
-  // Action plan counters
-  const totalAcoes = filteredAcoes.length;
-  const acoesConcluidas = filteredAcoes.filter((a) => a.status === 'Concluído').length;
-  const acoesEmAndamento = filteredAcoes.filter((a) => a.status === 'Em andamento').length;
-  const acoesAtrasadas = filteredAcoes.filter((a) => a.status === 'Atrasado').length;
-  const percentConcluido = totalAcoes > 0 ? Math.round((acoesConcluidas / totalAcoes) * 100) : 0;
 
   // Gap for current month
   const currentMonthGap = currentMonthKPI.sclAtual - currentMonthKPI.sclMeta;
@@ -1023,80 +1015,6 @@ export const DashboardView: React.FC = () => {
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* ACTION PLAN STATUS WIDGET */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Status dos Planos de Ação</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Controle do tratamento de causas raiz das maiores perdas financeiras
-            </p>
-          </div>
-          <button
-            onClick={() => setActiveTab('plano-acao')}
-            className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1.5 self-start sm:self-auto bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <span>Gerenciar Planos de Ação</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Counter Status Grid - 4 Columns */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5 text-center">
-            <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-              Total Ações
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-slate-100 font-mono">
-              {totalAcoes}
-            </span>
-          </div>
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3.5 text-center">
-            <span className="text-[10px] text-emerald-400 uppercase font-bold block mb-1">
-              Concluídas
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
-              {acoesConcluidas}
-            </span>
-          </div>
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 text-center">
-            <span className="text-[10px] text-amber-400 uppercase font-bold block mb-1">
-              Em Andamento
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
-              {acoesEmAndamento}
-            </span>
-          </div>
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3.5 text-center">
-            <span className="text-[10px] text-rose-400 uppercase font-bold block mb-1">
-              Atrasadas
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-rose-400 font-mono">
-              {acoesAtrasadas}
-            </span>
-          </div>
-        </div>
-
-        {/* Progress Bar & Summary */}
-        <div className="bg-slate-950/40 border border-slate-800/80 rounded-xl p-3.5 space-y-2">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-300 font-medium flex items-center gap-1.5">
-              <span>Percentual Geral de Conclusão</span>
-            </span>
-            <span className="text-emerald-400 font-bold font-mono text-sm">{percentConcluido}%</span>
-          </div>
-          <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-emerald-500 h-3 rounded-full transition-all duration-500 shadow-sm"
-              style={{ width: `${percentConcluido}%` }}
-            />
-          </div>
         </div>
       </div>
 

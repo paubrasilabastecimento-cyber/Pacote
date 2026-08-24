@@ -134,7 +134,6 @@ export type MenuItemId =
   | 'dashboard'
   | 'reposicao'
   | 'perdas-por'
-  | 'consumo-interno'
   | 'troca-improprio'
   | 'arvore-decomposicao'
   | 'registrar'

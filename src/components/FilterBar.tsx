@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { TURNOS } from '../data/mockData';
 import { formatMesAno } from '../utils/formatters';
 import { X, RotateCcw, Filter, Calendar } from 'lucide-react';
+import { DateRangePickerPopover } from './DateRangePickerPopover';
 
 interface FilterBarProps {
   isOpen: boolean;
@@ -184,25 +185,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({ isOpen, setIsOpen }) => {
             />
           </div>
 
-          {/* Intervalo de Datas */}
+          {/* Intervalo de Datas / Período */}
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-              De / Até (Data)
+              Período & Calendário
             </label>
-            <div className="grid grid-cols-2 gap-1">
-              <input
-                type="date"
-                value={filtros.dataInicio}
-                onChange={(e) => handleChange('dataInicio', e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-1 text-[11px] text-slate-200 focus:border-amber-500 focus:outline-none"
-              />
-              <input
-                type="date"
-                value={filtros.dataFim}
-                onChange={(e) => handleChange('dataFim', e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-1 text-[11px] text-slate-200 focus:border-amber-500 focus:outline-none"
-              />
-            </div>
+            <DateRangePickerPopover
+              triggerClassName="w-full justify-between bg-slate-800 border-slate-700 hover:border-amber-500"
+            />
           </div>
         </div>
       </div>

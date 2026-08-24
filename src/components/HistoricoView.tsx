@@ -4,7 +4,6 @@ import { parseQuebrasJSON } from '../utils/jsonImporter';
 import { processarPlanilhaReposicao } from '../utils/reposicaoUtils';
 import { parseExcelOrCsvFile, parseJsonFile } from '../utils/perdasPorAnalytics';
 import { parseTrocaFile } from '../utils/spreadsheetAnalyzer';
-import { useConsumoInternoData } from '../hooks/useConsumoInternoData';
 import {
   Upload,
   FileJson,
@@ -14,7 +13,6 @@ import {
   Database,
   BarChart3,
   Layers,
-  Beer,
   RotateCcw,
   Sparkles,
   ArrowRight,
@@ -30,7 +28,6 @@ import { downloadPlatformBackup, saveAllPlatformDataToServer } from '../utils/pl
 
 export const HistoricoView: React.FC = () => {
   const { importBatchPerdas, setActiveTab, importBatchTrocaPlanilha } = useApp();
-  const { importJsonData: importConsumoJson } = useConsumoInternoData('empresa-01');
 
   // Modal de Salvar Todos os Dados / Backup Geral
   const [isSaveModalOpen, setIsSaveModalOpen] = useState<boolean>(false);
@@ -48,7 +45,6 @@ export const HistoricoView: React.FC = () => {
   const inputReposicaoJsonRef = useRef<HTMLInputElement>(null);
   const inputReposicaoPlanilhaRef = useRef<HTMLInputElement>(null);
   const inputPerdasPorRef = useRef<HTMLInputElement>(null);
-  const inputConsumoRef = useRef<HTMLInputElement>(null);
   const inputTrocaRef = useRef<HTMLInputElement>(null);
 
   const showFeedback = (aba: string, tipo: 'sucesso' | 'erro', mensagem: string) => {
@@ -195,27 +191,7 @@ export const HistoricoView: React.FC = () => {
     if (e.target) e.target.value = '';
   };
 
-  // 4. IMPORTAR CONSUMO INTERNO (JSON)
-  const handleImportConsumo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsed = JSON.parse(text);
-        const dataArray = Array.isArray(parsed) ? parsed : [parsed];
-        await importConsumoJson(dataArray);
-        showFeedback('Consumo Interno', 'sucesso', `${dataArray.length} requisições importadas e sincronizadas no Consumo Interno!`);
-      } catch {
-        showFeedback('Consumo Interno', 'erro', 'Erro de sintaxe no JSON de Consumo Interno.');
-      }
-    };
-    reader.readAsText(file);
-    if (e.target) e.target.value = '';
-  };
-
-  // 5. IMPORTAR TROCA PROD. IMPRÓPRIO (JSON OU PLANILHA EXCEL/CSV)
+  // 4. IMPORTAR TROCA PROD. IMPRÓPRIO (JSON OU PLANILHA EXCEL/CSV)
   const handleImportTroca = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -241,7 +217,6 @@ export const HistoricoView: React.FC = () => {
       <input type="file" ref={inputReposicaoJsonRef} accept=".json,application/json" onChange={handleImportReposicaoJson} className="hidden" />
       <input type="file" ref={inputReposicaoPlanilhaRef} accept=".xlsx,.xls,.csv" onChange={handleImportReposicaoPlanilha} className="hidden" />
       <input type="file" ref={inputPerdasPorRef} accept=".json,.xlsx,.xls,.csv" onChange={handleImportPerdasPor} className="hidden" />
-      <input type="file" ref={inputConsumoRef} accept=".json,application/json" onChange={handleImportConsumo} className="hidden" />
       <input type="file" ref={inputTrocaRef} accept=".json,application/json,.xlsx,.xls,.csv" onChange={handleImportTroca} className="hidden" />
 
       {/* Header Central de Importação */}
@@ -319,7 +294,7 @@ export const HistoricoView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                Gera um arquivo único consolidando <strong>Quebras Anuais</strong>, <strong>Reposição</strong>, <strong>Perdas por Mercadoria</strong>, <strong>Consumo Interno</strong>, <strong>Troca Prod. Impróprio</strong>, <strong>Planos 5W2H</strong> e <strong>Vales</strong>.
+                Gera um arquivo único consolidando <strong>Quebras Anuais</strong>, <strong>Reposição</strong>, <strong>Perdas por Mercadoria</strong>, <strong>Troca Prod. Impróprio</strong>, <strong>Planos 5W2H</strong> e <strong>Vales</strong>.
               </p>
             </div>
           </div>
@@ -491,42 +466,7 @@ export const HistoricoView: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. CONSUMO INTERNO */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col justify-between transition-all group">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Beer className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                Consumo
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-white mb-1">Consumo Interno</h3>
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Registros e requisições de consumo interno da fábrica, armazém e logística por categoria, SKU e centro de custo.
-            </p>
-          </div>
-
-          <div className="space-y-2 pt-3 border-t border-slate-800/80">
-            <button
-              onClick={() => inputConsumoRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
-            >
-              <FileJson className="w-4 h-4" />
-              <span>Importar JSON de Consumo Interno</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('consumo-interno')}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <span>Ver Aba Consumo Interno</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* 5. TROCA PROD. IMPRÓPRIO */}
+        {/* 4. TROCA PROD. IMPRÓPRIO */}
         <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col justify-between transition-all group">
           <div>
             <div className="flex items-center justify-between mb-3">

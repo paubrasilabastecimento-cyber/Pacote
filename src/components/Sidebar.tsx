@@ -39,7 +39,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
     { id: 'dashboard', label: 'Análise Anual de Quebras', icon: <BarChart3 className="w-5 h-5" /> },
     { id: 'reposicao', label: 'Reposição', icon: <FileSpreadsheet className="w-5 h-5" />, badge: 'Novo' },
     { id: 'perdas-por', label: 'Perdas por Mercadoria', icon: <Layers className="w-5 h-5" /> },
-    { id: 'consumo-interno', label: 'Consumo Interno', icon: <Beer className="w-5 h-5" /> },
     { id: 'troca-improprio', label: 'Troca Prod. Impróprio', icon: <RotateCcw className="w-5 h-5" /> },
     { id: 'historico', label: 'Importar Dados', icon: <FolderUp className="w-5 h-5" /> },
   ];

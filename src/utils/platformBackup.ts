@@ -36,89 +36,108 @@ export interface PlatformFullBackup {
 /**
  * Coleta todos os dados de todas as abas e fontes da plataforma
  */
-export async function collectCurrentPlatformData(): Promise<PlatformFullBackup> {
-  // 1. Tentar ler do servidor primeiro (mais atualizado)
+export async function collectCurrentPlatformData(liveOverrides?: Partial<PlatformFullBackup['data']>): Promise<PlatformFullBackup> {
+  // 1. Obter dados base do servidor se disponíveis
+  let serverData: Partial<PlatformFullBackup['data']> = {};
   try {
     const res = await fetch('/api/backup');
     if (res.ok) {
-      const serverData = await res.json();
-      if (serverData && serverData.data) {
-        return serverData;
+      const json = await res.json();
+      if (json && json.data) {
+        serverData = json.data;
       }
     }
   } catch (err) {
-    console.warn('[BACKUP] Servidor offline ou indisponível para backup direto, lendo caches locais:', err);
+    console.warn('[BACKUP] Aviso: servidor offline ou fallback acionado:', err);
   }
 
-  // 2. Fallback: Ler do localStorage e caches da plataforma
-  let perdas: RegistroPerda[] = [];
-  let reposicaoItens: any[] = [];
-  let perdasPorItens: any[] = [];
-  let consumoInternoItens: any[] = [];
-  let trocasImproprio: RegistroTrocaImproprio[] = [];
-  let trocaPlanilhaItens: ItemPlanilha[] = [];
-  let nomeArquivoTroca: string | null = null;
-  let acoes: PlanoAcao[] = [];
-  let kpis: KPIStats[] = [];
-  let comentarios: ComentarioRevisao[] = [];
-  let valesItens: any[] = [];
+  // 2. Coletar e mesclar com dados do LocalStorage e estado ao vivo
+  let perdas: RegistroPerda[] = liveOverrides?.perdas || serverData.perdas || [];
+  let reposicaoItens: any[] = liveOverrides?.reposicaoItens || serverData.reposicaoItens || [];
+  let perdasPorItens: any[] = liveOverrides?.perdasPorItens || serverData.perdasPorItens || [];
+  let consumoInternoItens: any[] = liveOverrides?.consumoInternoItens || serverData.consumoInternoItens || [];
+  let trocasImproprio: RegistroTrocaImproprio[] = liveOverrides?.trocasImproprio || serverData.trocasImproprio || [];
+  let trocaPlanilhaItens: ItemPlanilha[] = liveOverrides?.trocaPlanilhaItens || serverData.trocaPlanilhaItens || [];
+  let nomeArquivoTroca: string | null = liveOverrides?.nomeArquivoTroca ?? serverData.nomeArquivoTroca ?? null;
+  let acoes: PlanoAcao[] = liveOverrides?.acoes || serverData.acoes || [];
+  let kpis: KPIStats[] = liveOverrides?.kpis || serverData.kpis || [];
+  let comentarios: ComentarioRevisao[] = liveOverrides?.comentarios || serverData.comentarios || [];
+  let valesItens: any[] = liveOverrides?.valesItens || serverData.valesItens || [];
 
   try {
     const p = localStorage.getItem('AMBEV_REGISTROS_PERDAS');
-    if (p) perdas = JSON.parse(p);
+    if (p && (!perdas || perdas.length === 0)) perdas = JSON.parse(p);
   } catch {}
 
   try {
     const r = localStorage.getItem('AMBEV_REPOSICAO_BEBIDAS');
-    if (r) reposicaoItens = JSON.parse(r);
+    if (r) {
+      const parsedR = JSON.parse(r);
+      if (Array.isArray(parsedR) && parsedR.length > 0) reposicaoItens = parsedR;
+    }
   } catch {}
 
   try {
     const pp = localStorage.getItem('ambev_perdas_por_mercadoria_v1');
-    if (pp) perdasPorItens = JSON.parse(pp);
+    if (pp) {
+      const parsedPP = JSON.parse(pp);
+      if (Array.isArray(parsedPP) && parsedPP.length > 0) perdasPorItens = parsedPP;
+    }
   } catch {}
 
   try {
-    const ci = localStorage.getItem('ARMAZEM_FACIL_CONSUMO_INTERNO_CACHE');
-    if (ci) consumoInternoItens = JSON.parse(ci);
+    const ci1 = localStorage.getItem('ARMAZEM_FACIL_CONSUMO_INTERNO_CACHE_ambev-filial-01');
+    const ci2 = localStorage.getItem('ARMAZEM_FACIL_CONSUMO_INTERNO_CACHE');
+    const ci = ci1 || ci2;
+    if (ci) {
+      const parsedCI = JSON.parse(ci);
+      if (Array.isArray(parsedCI) && parsedCI.length > 0) consumoInternoItens = parsedCI;
+    }
   } catch {}
 
   try {
     const tp = localStorage.getItem('AMBEV_TROCA_PLANILHA_ITENS');
-    if (tp) trocaPlanilhaItens = JSON.parse(tp);
-    nomeArquivoTroca = localStorage.getItem('AMBEV_TROCA_PLANILHA_NOME_ARQUIVO') || null;
+    if (tp) {
+      const parsedTP = JSON.parse(tp);
+      if (Array.isArray(parsedTP) && parsedTP.length > 0) trocaPlanilhaItens = parsedTP;
+    }
+    const fn = localStorage.getItem('AMBEV_TROCA_PLANILHA_NOME_ARQUIVO');
+    if (fn) nomeArquivoTroca = fn;
   } catch {}
 
   try {
     const a = localStorage.getItem('AMBEV_PLANOS_ACAO');
-    if (a) acoes = JSON.parse(a);
+    if (a && (!acoes || acoes.length === 0)) acoes = JSON.parse(a);
   } catch {}
 
   try {
     const k = localStorage.getItem('AMBEV_KPIS');
-    if (k) kpis = JSON.parse(k);
+    if (k && (!kpis || kpis.length === 0)) kpis = JSON.parse(k);
   } catch {}
 
   try {
     const c = localStorage.getItem('AMBEV_COMENTARIOS');
-    if (c) comentarios = JSON.parse(c);
+    if (c && (!comentarios || comentarios.length === 0)) comentarios = JSON.parse(c);
   } catch {}
 
   try {
     const v = localStorage.getItem('AMBEV_VALES_PREJUIZO');
-    if (v) valesItens = JSON.parse(v);
+    if (v) {
+      const parsedV = JSON.parse(v);
+      if (Array.isArray(parsedV) && parsedV.length > 0) valesItens = parsedV;
+    }
   } catch {}
 
-  const totalQuebras = perdas.length;
-  const totalReposicao = reposicaoItens.length;
-  const totalPerdasPor = perdasPorItens.length;
-  const totalConsumoInterno = consumoInternoItens.length;
-  const totalTrocasImproprio = trocasImproprio.length;
-  const totalTrocaPlanilha = trocaPlanilhaItens.length;
-  const totalPlanosAcao = acoes.length;
-  const totalVales = valesItens.length;
-  const totalKPIs = kpis.length;
-  const totalComentarios = comentarios.length;
+  const totalQuebras = (perdas || []).length;
+  const totalReposicao = (reposicaoItens || []).length;
+  const totalPerdasPor = (perdasPorItens || []).length;
+  const totalConsumoInterno = (consumoInternoItens || []).length;
+  const totalTrocasImproprio = (trocasImproprio || []).length;
+  const totalTrocaPlanilha = (trocaPlanilhaItens || []).length;
+  const totalPlanosAcao = (acoes || []).length;
+  const totalVales = (valesItens || []).length;
+  const totalKPIs = (kpis || []).length;
+  const totalComentarios = (comentarios || []).length;
   const totalRegistrosGerais =
     totalQuebras +
     totalReposicao +
@@ -149,17 +168,17 @@ export async function collectCurrentPlatformData(): Promise<PlatformFullBackup> 
       totalRegistrosGerais,
     },
     data: {
-      perdas,
-      reposicaoItens,
-      perdasPorItens,
-      consumoInternoItens,
-      trocasImproprio,
-      trocaPlanilhaItens,
-      nomeArquivoTroca,
-      acoes,
-      kpis,
-      comentarios,
-      valesItens,
+      perdas: perdas || [],
+      reposicaoItens: reposicaoItens || [],
+      perdasPorItens: perdasPorItens || [],
+      consumoInternoItens: consumoInternoItens || [],
+      trocasImproprio: trocasImproprio || [],
+      trocaPlanilhaItens: trocaPlanilhaItens || [],
+      nomeArquivoTroca: nomeArquivoTroca || null,
+      acoes: acoes || [],
+      kpis: kpis || [],
+      comentarios: comentarios || [],
+      valesItens: valesItens || [],
     },
   };
 }

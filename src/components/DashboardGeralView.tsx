@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { useConsumoInternoData } from '../hooks/useConsumoInternoData';
 import { ItemReposicao } from '../types/reposicao';
 import { DEMO_REPOSICAO_BEBIDAS } from '../data/mockReposicao';
 import { PerdaItemJSON } from '../types/perdasPor';
@@ -15,7 +14,6 @@ import {
 import {
   BarChart3,
   Layers,
-  Beer,
   RotateCcw,
   PieChart as PieChartIcon,
   ArrowRight,
@@ -40,9 +38,6 @@ import {
   Cell,
   PieChart,
   Pie,
-  AreaChart,
-  Area,
-  ReferenceLine,
 } from 'recharts';
 
 const PALETA_AMBEV = {
@@ -57,7 +52,7 @@ const PALETA_AMBEV = {
   slate: '#64748b',
 };
 
-const CORES_PIE = ['#f59e0b', '#38bdf8', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#64748b'];
+const CORES_PIE = ['#f59e0b', '#38bdf8', '#6366f1', '#f43f5e', '#10b981', '#64748b'];
 
 export const DashboardGeralView: React.FC = () => {
   const {
@@ -66,8 +61,6 @@ export const DashboardGeralView: React.FC = () => {
     trocaPlanilhaItens,
     setActiveTab,
   } = useApp();
-
-  const { data: consumoInternoList } = useConsumoInternoData('empresa-01');
 
   // Selected Month filter inside Dashboard Geral ('all' or 'YYYY-MM')
   const [selectedMes, setSelectedMes] = useState<string>('all');
@@ -127,18 +120,7 @@ export const DashboardGeralView: React.FC = () => {
     );
   }, [itensPerdasPor, selectedMes]);
 
-  // D. Filtered Consumo Interno
-  const consumoInternoFiltrado = useMemo(() => {
-    if (!consumoInternoList) return [];
-    if (selectedMes === 'all') return consumoInternoList;
-    return consumoInternoList.filter(
-      (c) =>
-        (c.dtOperacao && c.dtOperacao.startsWith(selectedMes)) ||
-        (c.dataOperacao && c.dataOperacao.startsWith(selectedMes))
-    );
-  }, [consumoInternoList, selectedMes]);
-
-  // E. Filtered Trocas Impróprias
+  // D. Filtered Trocas Impróprias
   const trocasFiltradas = useMemo(() => {
     if (selectedMes === 'all') return itensTrocaImproprio;
     return itensTrocaImproprio.filter(
@@ -174,15 +156,6 @@ export const DashboardGeralView: React.FC = () => {
     [perdasPorFiltradas]
   );
 
-  const totalConsumoR$ = useMemo(
-    () => consumoInternoFiltrado.reduce((acc, c) => acc + (Number(c.valor) || 0), 0),
-    [consumoInternoFiltrado]
-  );
-  const totalConsumoItens = useMemo(
-    () => consumoInternoFiltrado.reduce((acc, c) => acc + (Number(c.qtde) || 0), 0),
-    [consumoInternoFiltrado]
-  );
-
   const totalTrocasR$ = useMemo(
     () => trocasFiltradas.reduce((acc, t) => acc + (Number(t.valor) || 0), 0),
     [trocasFiltradas]
@@ -192,7 +165,7 @@ export const DashboardGeralView: React.FC = () => {
     [trocasFiltradas]
   );
 
-  const custoTotalGeral = totalQuebrasR$ + totalReposicaoR$ + totalPerdasPorR$ + totalConsumoR$ + totalTrocasR$;
+  const custoTotalGeral = totalQuebrasR$ + totalReposicaoR$ + totalPerdasPorR$ + totalTrocasR$;
 
   // --- CHART 1: ABA ANÁLISE ANUAL DE QUEBRAS (Evolução Mensal Realizado vs Meta) ---
   const chartQuebrasMensal = useMemo(() => {
@@ -262,33 +235,7 @@ export const DashboardGeralView: React.FC = () => {
       .slice(0, 6);
   }, [perdasPorFiltradas]);
 
-  // --- CHART 4: ABA CONSUMO INTERNO (Evolução Mensal) ---
-  const chartConsumoInterno = useMemo(() => {
-    const mesesMap: Record<string, { mes: string; valor: number; meta: number }> = {
-      'Jan': { mes: 'Jan', valor: 3200, meta: 4000 },
-      'Fev': { mes: 'Fev', valor: 2890, meta: 4000 },
-      'Mar': { mes: 'Mar', valor: 3600, meta: 4000 },
-      'Abr': { mes: 'Abr', valor: 3100, meta: 4000 },
-      'Mai': { mes: 'Mai', valor: 3450, meta: 4000 },
-      'Jun': { mes: 'Jun', valor: 2980, meta: 4000 },
-      'Jul': { mes: 'Jul', valor: 3800, meta: 4000 },
-      'Ago': { mes: 'Ago', valor: 3400, meta: 4000 },
-    };
-
-    if (consumoInternoList && consumoInternoList.length > 0) {
-      consumoInternoList.forEach((c) => {
-        const rawDate = c.dtOperacao || c.dataOperacao || '2026-01';
-        const m = formatMesCurto(rawDate.slice(0, 7));
-        if (mesesMap[m]) {
-          mesesMap[m].valor += Number(c.valor) || 0;
-        }
-      });
-    }
-
-    return Object.values(mesesMap);
-  }, [consumoInternoList]);
-
-  // --- CHART 5: ABA TROCA PROD. IMPRÓPRIO (Distribuição por Categoria) ---
+  // --- CHART 4: ABA TROCA PROD. IMPRÓPRIO (Distribuição por Categoria) ---
   const chartTrocasMotivos = useMemo(() => {
     const motivosMap: Record<string, { categoria: string; valor: number; count: number }> = {};
     trocasFiltradas.forEach((item) => {
@@ -306,16 +253,15 @@ export const DashboardGeralView: React.FC = () => {
       .slice(0, 5);
   }, [trocasFiltradas]);
 
-  // --- CHART 6: COMPOSIÇÃO GERAL DO PREJUÍZO (Consolidado) ---
+  // --- CHART 5: COMPOSIÇÃO GERAL DO PREJUÍZO (Consolidado) ---
   const chartComposicaoGeral = useMemo(() => {
     return [
       { name: 'Quebras Armazém', value: Math.round(totalQuebrasR$), color: PALETA_AMBEV.amber },
       { name: 'Reposição', value: Math.round(totalReposicaoR$), color: PALETA_AMBEV.skyLight },
       { name: 'Perdas Mercadoria', value: Math.round(totalPerdasPorR$), color: PALETA_AMBEV.indigo },
-      { name: 'Consumo Interno', value: Math.round(totalConsumoR$), color: PALETA_AMBEV.purple },
       { name: 'Troca Impróprio', value: Math.round(totalTrocasR$), color: PALETA_AMBEV.rose },
     ].filter((item) => item.value > 0);
-  }, [totalQuebrasR$, totalReposicaoR$, totalPerdasPorR$, totalConsumoR$, totalTrocasR$]);
+  }, [totalQuebrasR$, totalReposicaoR$, totalPerdasPorR$, totalTrocasR$]);
 
   return (
     <div id="view-dashboard-geral" className="space-y-6 pb-12">
@@ -336,7 +282,7 @@ export const DashboardGeralView: React.FC = () => {
             Dashboard Geral de Perdas e Eficiência Operacional
           </h1>
           <p className="text-xs md:text-sm text-slate-400 max-w-3xl">
-            Painel executivo consolidando os indicadores e gráficos das abas operacionais do sistema: Quebras, Reposição, Perdas por Mercadoria, Consumo Interno e Troca de Produtos Impróprios.
+            Painel executivo consolidando os indicadores e gráficos das abas operacionais do sistema: Quebras de Armazém, Reposição, Perdas por Mercadoria e Troca de Produtos Impróprios.
           </p>
         </div>
 
@@ -366,8 +312,8 @@ export const DashboardGeralView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. TOP 6 EXECUTIVE SUMMARY KPI METRIC CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      {/* 2. TOP 5 EXECUTIVE SUMMARY KPI METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
         {/* Card 1: Quebras */}
         <div
           onClick={() => setActiveTab('dashboard')}
@@ -428,33 +374,13 @@ export const DashboardGeralView: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 4: Consumo Interno */}
-        <div
-          onClick={() => setActiveTab('consumo-interno')}
-          className="bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 rounded-xl p-4 transition-all duration-200 cursor-pointer group shadow-lg hover:shadow-purple-500/5"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">4. Consumo Interno</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Beer className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-lg font-black text-white">{formatCurrency(totalConsumoR$)}</div>
-          <div className="flex items-center justify-between mt-1 text-[11px] text-slate-400">
-            <span>{formatNumber(totalConsumoItens)} un</span>
-            <span className="text-purple-400 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-              Ver aba <ArrowRight className="w-3 h-3" />
-            </span>
-          </div>
-        </div>
-
-        {/* Card 5: Troca Produto Impróprio */}
+        {/* Card 4: Troca Produto Impróprio */}
         <div
           onClick={() => setActiveTab('troca-improprio')}
           className="bg-slate-900/90 border border-slate-800 hover:border-rose-500/50 rounded-xl p-4 transition-all duration-200 cursor-pointer group shadow-lg hover:shadow-rose-500/5"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">5. Troca Impróprio</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">4. Troca Impróprio</span>
             <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <RotateCcw className="w-4 h-4" />
             </div>
@@ -468,7 +394,7 @@ export const DashboardGeralView: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 6: Custo Total Consolidado */}
+        {/* Card 5: Custo Total Consolidado */}
         <div className="bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/40 rounded-xl p-4 shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Custo Total Pacote</span>
@@ -479,7 +405,7 @@ export const DashboardGeralView: React.FC = () => {
           <div className="text-lg font-black text-amber-400">{formatCurrency(custoTotalGeral)}</div>
           <div className="flex items-center justify-between mt-1 text-[11px] text-slate-400">
             <span>Consolidado Global</span>
-            <span className="text-emerald-400 font-bold">5 Módulos</span>
+            <span className="text-emerald-400 font-bold">4 Módulos</span>
           </div>
         </div>
       </div>
@@ -686,74 +612,7 @@ export const DashboardGeralView: React.FC = () => {
           </div>
         </div>
 
-        {/* CHART 4: ABA CONSUMO INTERNO */}
-        <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                  <Beer className="w-4 h-4" />
-                </span>
-                <div>
-                  <h3 className="font-bold text-white text-sm">Consumo Interno Autorizado</h3>
-                  <p className="text-[11px] text-slate-400">Evolução Mensal do Consumo Interno (R$) vs. Teto</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveTab('consumo-interno')}
-                className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-              >
-                <span>Acessar Aba</span>
-                <ExternalLink className="w-3 h-3" />
-              </button>
-            </div>
-
-            <div className="h-64 w-full mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartConsumoInterno} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorConsumo" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={PALETA_AMBEV.purple} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={PALETA_AMBEV.purple} stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="mes" stroke="#64748b" fontSize={11} />
-                  <YAxis
-                    stroke="#64748b"
-                    fontSize={11}
-                    tickFormatter={(val) => `R$ ${(val / 1000).toFixed(1)}k`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#334155',
-                      borderRadius: '0.75rem',
-                      fontSize: '12px',
-                    }}
-                    formatter={(val: any) => [formatCurrency(Number(val)), 'Consumo Realizado']}
-                  />
-                  <ReferenceLine y={4000} stroke="#f43f5e" strokeDasharray="3 3" label={{ value: 'Teto R$ 4k', fill: '#f43f5e', fontSize: 10 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="valor"
-                    stroke={PALETA_AMBEV.purple}
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorConsumo)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <span>Total Consumo: <strong className="text-slate-200">{formatCurrency(totalConsumoR$)}</strong></span>
-            <span>Total Unidades: <strong className="text-slate-200">{formatNumber(totalConsumoItens)} un</strong></span>
-          </div>
-        </div>
-
-        {/* CHART 5: ABA TROCA PRODUTO IMPRÓPRIO */}
+        {/* CHART 4: ABA TROCA PRODUTO IMPRÓPRIO */}
         <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -810,63 +669,63 @@ export const DashboardGeralView: React.FC = () => {
             <span>Total Trocas: <strong className="text-slate-200">{formatNumber(totalTrocasQtd)}</strong></span>
           </div>
         </div>
+      </div>
 
-        {/* CHART 6: COMPOSIÇÃO CONSOLIDADA GERAL */}
-        <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <PieChartIcon className="w-4 h-4" />
-                </span>
-                <div>
-                  <h3 className="font-bold text-white text-sm">Composição Geral do Pacote Prejuízo</h3>
-                  <p className="text-[11px] text-slate-400">Proporção Financeira entre as 5 Fontes de Prejuízo</p>
-                </div>
+      {/* 4. COMPOSIÇÃO GERAL DO PACOTE */}
+      <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <PieChartIcon className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="font-bold text-white text-sm">Composição Geral do Pacote Prejuízo</h3>
+                <p className="text-[11px] text-slate-400">Proporção Financeira entre as 4 Fontes de Prejuízo</p>
               </div>
             </div>
-
-            <div className="h-64 w-full mt-2 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartComposicaoGeral}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    label={(entry) => `${entry.name}`}
-                  >
-                    {chartComposicaoGeral.map((entry, index) => (
-                      <Cell key={`cell-comp-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#334155',
-                      borderRadius: '0.75rem',
-                      fontSize: '12px',
-                    }}
-                    formatter={(val: any) => [formatCurrency(Number(val)), 'Impacto Financeiro']}
-                  />
-                  <Legend verticalAlign="bottom" height={28} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <span>Maior Ofensor: <strong className="text-amber-400">Quebras Armazém ({formatCurrency(totalQuebrasR$)})</strong></span>
-            <span>Total Consolidado: <strong className="text-slate-200">{formatCurrency(custoTotalGeral)}</strong></span>
+          <div className="h-64 w-full mt-2 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartComposicaoGeral}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={4}
+                  label={(entry) => `${entry.name}`}
+                >
+                  {chartComposicaoGeral.map((entry, index) => (
+                    <Cell key={`cell-comp-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    borderColor: '#334155',
+                    borderRadius: '0.75rem',
+                    fontSize: '12px',
+                  }}
+                  formatter={(val: any) => [formatCurrency(Number(val)), 'Impacto Financeiro']}
+                />
+                <Legend verticalAlign="bottom" height={28} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <span>Maior Ofensor: <strong className="text-amber-400">Quebras Armazém ({formatCurrency(totalQuebrasR$)})</strong></span>
+          <span>Total Consolidado: <strong className="text-slate-200">{formatCurrency(custoTotalGeral)}</strong></span>
         </div>
       </div>
 
-      {/* 4. CONSOLIDATED SUMMARY COMPARISON TABLE */}
+      {/* 5. CONSOLIDATED SUMMARY COMPARISON TABLE */}
       <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -970,30 +829,6 @@ export const DashboardGeralView: React.FC = () => {
               </tr>
 
               {/* Row 4 */}
-              <tr className="hover:bg-slate-800/30 transition-colors">
-                <td className="py-3 px-4 font-bold flex items-center gap-2 text-purple-400">
-                  <Beer className="w-4 h-4" />
-                  <span>Consumo Interno</span>
-                </td>
-                <td className="py-3 px-4 text-right font-mono font-bold text-white">{formatCurrency(totalConsumoR$)}</td>
-                <td className="py-3 px-4 text-right text-slate-400">{formatNumber(totalConsumoItens)} unidades</td>
-                <td className="py-3 px-4 text-slate-300">Treinamento & Degustação Técnica</td>
-                <td className="py-3 px-4 text-center">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    Dentro da Cota
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-center">
-                  <button
-                    onClick={() => setActiveTab('consumo-interno')}
-                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-[11px] transition-colors cursor-pointer"
-                  >
-                    Abrir Aba
-                  </button>
-                </td>
-              </tr>
-
-              {/* Row 5 */}
               <tr className="hover:bg-slate-800/30 transition-colors">
                 <td className="py-3 px-4 font-bold flex items-center gap-2 text-rose-400">
                   <RotateCcw className="w-4 h-4" />

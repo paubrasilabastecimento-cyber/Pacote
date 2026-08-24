@@ -106,10 +106,11 @@ function loadData() {
             };
           });
         }
-        // Refresh KPIs with official monthly targets
-        parsed.kpis = [...HISTORICO_KPIS];
-        // If perdas has older demo generation, ensure records match updated target perdas
-        if (Array.isArray(parsed.perdas) && (parsed.perdas.length === 0 || parsed.perdas[0]?.id?.startsWith('PERD-2026-'))) {
+        // Ensure KPIs are present
+        if (!Array.isArray(parsed.kpis) || parsed.kpis.length === 0) {
+          parsed.kpis = [...HISTORICO_KPIS];
+        }
+        if (!Array.isArray(parsed.perdas) || parsed.perdas.length === 0) {
           parsed.perdas = [...DEMO_REGISTROS_PERDAS];
         }
         if (!Array.isArray(parsed.trocasImproprio) || parsed.trocasImproprio.length === 0) {

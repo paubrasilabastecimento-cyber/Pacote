@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { FilterBar } from './components/FilterBar';
+import { DashboardGeralView } from './components/DashboardGeralView';
 import { DashboardView } from './components/DashboardView';
 import { RegistroPerdaView } from './components/RegistroPerdaView';
 import { AnaliseCausasView } from './components/AnaliseCausasView';
@@ -51,6 +52,8 @@ function MainLayout() {
 
   const renderActiveView = () => {
     switch (activeTab) {
+      case 'dashboard-geral':
+        return <DashboardGeralView />;
       case 'dashboard':
         return <DashboardView />;
       case 'reposicao':

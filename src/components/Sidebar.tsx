@@ -23,6 +23,7 @@ import {
   FolderUp,
   Truck,
   ShieldAlert,
+  LayoutDashboard,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
   const { activeTab, setActiveTab, resetDemoData, isLoading } = useApp();
 
   const menuItems: { id: MenuItemId; label: string; icon: React.ReactNode; badge?: string }[] = [
+    { id: 'dashboard-geral', label: 'Dashboard Geral', icon: <LayoutDashboard className="w-5 h-5" />, badge: 'Completo' },
     { id: 'dashboard', label: 'Análise Anual de Quebras', icon: <BarChart3 className="w-5 h-5" /> },
     { id: 'reposicao', label: 'Reposição', icon: <FileSpreadsheet className="w-5 h-5" />, badge: 'Novo' },
     { id: 'perdas-por', label: 'Perdas por Mercadoria', icon: <Layers className="w-5 h-5" /> },

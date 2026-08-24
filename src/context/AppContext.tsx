@@ -89,7 +89,7 @@ const initialFiltros: FiltroGlobal = {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<MenuItemId>('dashboard');
+  const [activeTab, setActiveTab] = useState<MenuItemId>('dashboard-geral');
   const [filtros, setFiltros] = useState<FiltroGlobal>(initialFiltros);
   
   const [perdas, setPerdas] = useState<RegistroPerda[]>(DEMO_REGISTROS_PERDAS);

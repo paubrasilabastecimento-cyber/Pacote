@@ -34,21 +34,60 @@ export const formatNumber = (val: number): string => {
 
 export const formatDateBR = (dateStr: string, includeTime: boolean = false): string => {
   if (!dateStr) return '-';
+  const clean = dateStr.trim();
+  if (clean.includes('/') && !clean.includes('-')) {
+    return clean;
+  }
   
   // Check if string contains both date and time (e.g. "2026-01-01 11:59:15" or "2026-01-01T11:59:15")
-  const isISO = dateStr.includes('T');
-  const [datePart, timePart] = isISO ? dateStr.split('T') : dateStr.split(' ');
+  const isISO = clean.includes('T');
+  const [datePart, timePart] = isISO ? clean.split('T') : clean.split(' ');
   const parts = (datePart || '').split('-');
   
-  let formattedDate = dateStr;
+  let formattedDate = clean;
   if (parts.length === 3) {
-    formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (parts[0].length === 4) {
+      formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    } else {
+      formattedDate = `${parts[0]}/${parts[1]}/${parts[2]}`;
+    }
   }
 
   if (includeTime && timePart) {
     return `${formattedDate} às ${timePart.slice(0, 8)}`;
   }
   return formattedDate;
+};
+
+export const parseDateToISO = (dateStr?: string): string => {
+  if (!dateStr) return new Date().toISOString().slice(0, 10);
+  const clean = String(dateStr).trim();
+  
+  // If DD/MM/YYYY
+  if (clean.includes('/')) {
+    const parts = clean.split(' ')[0].split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+      return `${year}-${month}-${day}`;
+    }
+  }
+  
+  // If YYYY-MM-DD
+  if (clean.includes('-')) {
+    const parts = clean.split('T')[0].split(' ')[0].split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else if (parts[2].length === 4) {
+        // DD-MM-YYYY
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+  }
+  
+  return clean.slice(0, 10);
 };
 
 export const formatMesAno = (mesRef: string): string => {

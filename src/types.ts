@@ -130,6 +130,7 @@ export interface RegistroTrocaImproprio {
 }
 
 export type MenuItemId =
+  | 'dashboard-geral'
   | 'dashboard'
   | 'reposicao'
   | 'perdas-por'

@@ -172,14 +172,14 @@ export const ConsumoTable: React.FC<ConsumoTableProps> = ({
   const exportToJSON = () => {
     const formatted = filteredData.map((d) => ({
       operacao: d.operacao,
-      dataOperacao: d.dtOperacao,
-      emissao: d.emissao,
+      data_operacao: d.data_operacao || formatDateBR(d.dtOperacao),
+      data_emissao: d.data_emissao || formatDateBR(d.emissao),
       status: d.status,
       produto: d.produtoId,
-      unidade: d.unidade,
+      unidade: d.unidade || 'cx',
       descricao: d.descricao,
-      qtde: d.qtde,
-      valor: Number(d.total.toFixed(2)),
+      quantidade: d.quantidade ?? d.qtde,
+      valor: Number((d.valor ?? d.total).toFixed(2)),
       embalagem: d.embalagem || 'LONG NECK',
     }));
 

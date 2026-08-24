@@ -18,6 +18,7 @@ interface TopBarProps {
 }
 
 const TAB_TITLES: Record<MenuItemId, { title: string; subtitle: string }> = {
+  'dashboard-geral': { title: 'Dashboard Geral Consolidado', subtitle: 'Painel executivo com gráficos integrados de todas as abas do sistema' },
   dashboard: { title: 'Análise Anual de Quebras', subtitle: 'Comparativo Meta 2026 x Real 2026 e Indicadores do Pacote Prejuízo' },
   reposicao: { title: 'Reposição de Bebidas', subtitle: 'Painel analítico de reposições, formatos de embalagem e achados operacionais' },
   'perdas-por': { title: 'Perdas por Mercadoria', subtitle: 'Análise estruturada de perdas, conversor Excel/JSON, Pareto e árvore por mês' },

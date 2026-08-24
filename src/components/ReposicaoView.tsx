@@ -27,6 +27,17 @@ import {
   CheckCircle2,
   Info,
   Copy,
+  Truck,
+  User,
+  Users,
+  MapPin,
+  FileText,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
+  ShieldAlert,
+  Droplet,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -41,17 +52,21 @@ import {
   PieChart,
   Pie,
 } from 'recharts';
-import { ItemReposicao, FiltroReposicao } from '../types/reposicao';
+import { ItemReposicao } from '../types/reposicao';
 import { DEMO_REPOSICAO_BEBIDAS } from '../data/mockReposicao';
 import {
   formatBRL,
   formatNumber,
+  formatHL,
   formatPercent,
   formatDataBR,
   calcularResumoKPI,
   calcularValorPorMes,
   calcularTop8Produtos,
   calcularValorPorEmbalagem,
+  calcularTopRotas,
+  calcularStatusVales,
+  calcularTopMotoristas,
   gerarAchadosRelevantes,
   processarPlanilhaReposicao,
   exportarParaCSV,
@@ -64,8 +79,42 @@ const CORES_EMBALAGEM: Record<string, string> = {
   Litrão: '#10b981', // Emerald 500
   'Long Neck': '#a855f7', // Purple 500
   PET: '#ec4899', // Pink 500
+  'Chopp Barril': '#eab308', // Yellow 500
   Outros: '#64748b', // Slate 500
 };
+
+const CORES_STATUS: Record<string, string> = {
+  Compensado: '#10b981', // Emerald 500
+  Pendente: '#f59e0b', // Amber 500
+  'Em Aberto': '#38bdf8', // Sky 400
+  Faturado: '#8b5cf6', // Purple 500
+  Descontado: '#ef4444', // Red 500
+};
+
+const EXEMPLO_JSON_OFICIAL = `{
+  "item_numero": 1,
+  "data_emissao": "14/01/2026",
+  "nota_fiscal": "252161",
+  "mapa_carga": "M1055",
+  "rota_setor": "R111",
+  "motorista": "DANILLO PEREIRA DOS SANTOS SILVA",
+  "cpf_motorista": "713.650.714-64",
+  "ajudante_1": "GEOVANE ARAUJO DA SILVA",
+  "cpf_ajudante_1": "099.123.694-75",
+  "ajudante_2": "-",
+  "cpf_ajudante_2": "Ausente",
+  "equipe_completa": "GEOVANE ARAUJO DA SILVA",
+  "status_vale": "Compensado",
+  "volume_total_hl": 0.08,
+  "valor_total_prejuizo": 57.04,
+  "total_integrantes_rateio": "2 Integrante(s)",
+  "valor_rateado_por_pessoa": 28.52,
+  "qtd_itens": 1,
+  "codigo_cliente": "CLI3012",
+  "razao_social_cliente": "PONTO DE VENDA (PDV)",
+  "detalhamento_skus": "9068 - SKOL LATA 350ML SH C/12 NPAL (2 CX)",
+  "id_vale_sstr": "vale_hist_1001"
+}`;
 
 export const ReposicaoView: React.FC = () => {
   // Estado principal de dados com persistência local
@@ -85,13 +134,17 @@ export const ReposicaoView: React.FC = () => {
   // Filtros locais
   const [filtroMes, setFiltroMes] = useState<string>('');
   const [filtroEmbalagem, setFiltroEmbalagem] = useState<string>('');
+  const [filtroRota, setFiltroRota] = useState<string>('');
+  const [filtroStatus, setFiltroStatus] = useState<string>('');
   const [buscaTermo, setBuscaTermo] = useState<string>('');
-  const [ordenacao, setOrdenacao] = useState<'valor-desc' | 'valor-asc' | 'qtde-desc' | 'data-desc' | 'data-asc'>('valor-desc');
+  const [ordenacao, setOrdenacao] = useState<'valor-desc' | 'valor-asc' | 'volume-desc' | 'qtde-desc' | 'data-desc' | 'data-asc'>('data-desc');
+  const [mostrarTabela, setMostrarTabela] = useState<boolean>(false);
 
   // Modais
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [isJsonModalOpen, setIsJsonModalOpen] = useState<boolean>(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
+  const [itemDetalhes, setItemDetalhes] = useState<ItemReposicao | null>(null);
   const [editItem, setEditItem] = useState<ItemReposicao | null>(null);
   const [textoColado, setTextoColado] = useState<string>('');
   const [jsonColado, setJsonColado] = useState<string>('');
@@ -100,20 +153,44 @@ export const ReposicaoView: React.FC = () => {
 
   // Formulário de Novo/Edição
   const [formNovo, setFormNovo] = useState<{
-    dataOperacao: string;
-    descricao: string;
-    valor: string;
-    qtde: string;
+    dataEmissao: string;
+    notaFiscal: string;
+    mapaCarga: string;
+    rotaSetor: string;
+    motorista: string;
+    cpfMotorista: string;
+    ajudante1: string;
+    cpfAjudante1: string;
+    ajudante2: string;
+    statusVale: string;
+    volumeTotalHL: string;
+    valorTotalPrejuizo: string;
+    qtdItens: string;
+    razaoSocialCliente: string;
+    detalhamentoSkus: string;
+    idValeSstr: string;
     embalagem: string;
     motivo: string;
     observacao: string;
   }>({
-    dataOperacao: new Date().toISOString().slice(0, 10),
-    descricao: '',
-    valor: '',
-    qtde: '',
+    dataEmissao: new Date().toISOString().slice(0, 10),
+    notaFiscal: '',
+    mapaCarga: '',
+    rotaSetor: 'R111',
+    motorista: '',
+    cpfMotorista: '',
+    ajudante1: '',
+    cpfAjudante1: '',
+    ajudante2: '-',
+    statusVale: 'Compensado',
+    volumeTotalHL: '0.08',
+    valorTotalPrejuizo: '',
+    qtdItens: '1',
+    razaoSocialCliente: 'PONTO DE VENDA (PDV)',
+    detalhamentoSkus: '',
+    idValeSstr: '',
     embalagem: 'Lata',
-    motivo: 'Avaria em Movimentação',
+    motivo: 'Avaria em Transporte/Rota',
     observacao: '',
   });
 
@@ -166,25 +243,39 @@ export const ReposicaoView: React.FC = () => {
       if (filtroEmbalagem && item.embalagem !== filtroEmbalagem) {
         return false;
       }
+      if (filtroRota && item.rota_setor !== filtroRota) {
+        return false;
+      }
+      if (filtroStatus && item.status_vale !== filtroStatus) {
+        return false;
+      }
       if (buscaTermo) {
         const termo = buscaTermo.toLowerCase();
-        const matchDesc = (item.descricao || '').toLowerCase().includes(termo);
+        const matchDesc = (item.detalhamento_skus || item.descricao || '').toLowerCase().includes(termo);
         const matchEmb = (item.embalagem || '').toLowerCase().includes(termo);
-        const matchMot = (item.motivo || '').toLowerCase().includes(termo);
-        if (!matchDesc && !matchEmb && !matchMot) return false;
+        const matchMot = (item.motorista || '').toLowerCase().includes(termo);
+        const matchRota = (item.rota_setor || '').toLowerCase().includes(termo);
+        const matchNF = (item.nota_fiscal || '').toLowerCase().includes(termo);
+        const matchVale = (item.id_vale_sstr || '').toLowerCase().includes(termo);
+        const matchPDV = (item.razao_social_cliente || '').toLowerCase().includes(termo);
+        const matchAjud = (item.ajudante_1 || '').toLowerCase().includes(termo);
+        if (!matchDesc && !matchEmb && !matchMot && !matchRota && !matchNF && !matchVale && !matchPDV && !matchAjud) {
+          return false;
+        }
       }
       return true;
     });
-  }, [itens, filtroMes, filtroEmbalagem, buscaTermo]);
+  }, [itens, filtroMes, filtroEmbalagem, filtroRota, filtroStatus, buscaTermo]);
 
   // Lista ordenada para a tabela
   const itensOrdenados = useMemo(() => {
     return [...itensFiltrados].sort((a, b) => {
       if (ordenacao === 'valor-desc') return b.valor - a.valor;
       if (ordenacao === 'valor-asc') return a.valor - b.valor;
+      if (ordenacao === 'volume-desc') return b.volume_total_hl - a.volume_total_hl;
       if (ordenacao === 'qtde-desc') return b.qtde - a.qtde;
-      if (ordenacao === 'data-desc') return b.dataOperacao.localeCompare(a.dataOperacao);
-      if (ordenacao === 'data-asc') return a.dataOperacao.localeCompare(b.dataOperacao);
+      if (ordenacao === 'data-desc') return (b.data_emissao || b.dataOperacao).localeCompare(a.data_emissao || a.dataOperacao);
+      if (ordenacao === 'data-asc') return (a.data_emissao || a.dataOperacao).localeCompare(b.data_emissao || b.dataOperacao);
       return 0;
     });
   }, [itensFiltrados, ordenacao]);
@@ -194,9 +285,12 @@ export const ReposicaoView: React.FC = () => {
   const dadosPorMes = useMemo(() => calcularValorPorMes(itensFiltrados), [itensFiltrados]);
   const dadosTop8 = useMemo(() => calcularTop8Produtos(itensFiltrados), [itensFiltrados]);
   const dadosPorEmbalagem = useMemo(() => calcularValorPorEmbalagem(itensFiltrados), [itensFiltrados]);
+  const dadosTopRotas = useMemo(() => calcularTopRotas(itensFiltrados), [itensFiltrados]);
+  const dadosStatusVales = useMemo(() => calcularStatusVales(itensFiltrados), [itensFiltrados]);
+  const dadosTopMotoristas = useMemo(() => calcularTopMotoristas(itensFiltrados), [itensFiltrados]);
   const achados = useMemo(() => gerarAchadosRelevantes(itensFiltrados), [itensFiltrados]);
 
-  // Lista de meses disponíveis para o dropdown
+  // Listas para dropdowns de filtros
   const mesesDisponiveis = useMemo(() => {
     const setMeses = new Set<string>();
     itens.forEach((i) => {
@@ -206,11 +300,26 @@ export const ReposicaoView: React.FC = () => {
     return Array.from(setMeses).sort().reverse();
   }, [itens]);
 
-  // Lista de tipos de embalagem disponíveis
   const embalagensDisponiveis = useMemo(() => {
     const setEmb = new Set<string>();
     itens.forEach((i) => setEmb.add(i.embalagem || 'Outros'));
     return Array.from(setEmb);
+  }, [itens]);
+
+  const rotasDisponiveis = useMemo(() => {
+    const setR = new Set<string>();
+    itens.forEach((i) => {
+      if (i.rota_setor) setR.add(i.rota_setor);
+    });
+    return Array.from(setR).sort();
+  }, [itens]);
+
+  const statusDisponiveis = useMemo(() => {
+    const setS = new Set<string>();
+    itens.forEach((i) => {
+      if (i.status_vale) setS.add(i.status_vale);
+    });
+    return Array.from(setS);
   }, [itens]);
 
   // Handler para Upload de Planilha Excel ou CSV
@@ -238,7 +347,7 @@ export const ReposicaoView: React.FC = () => {
         if (itensProcessados.length === 0) {
           setImportStatus({
             tipo: 'erro',
-            msg: 'Nenhuma coluna correspondente encontrada. Verifique se a planilha possui: Dt. Operacao, Descrição, Valor, Qtde e Embalagem.',
+            msg: 'Nenhuma coluna correspondente encontrada. Verifique se a planilha possui colunas do modelo SSTR ou Dt. Operacao, Descrição, Valor, Qtde.',
           });
           return;
         }
@@ -246,7 +355,7 @@ export const ReposicaoView: React.FC = () => {
         persistData(itensProcessados);
         setImportStatus({
           tipo: 'sucesso',
-          msg: `${itensProcessados.length} lançamentos importados e processados com sucesso!`,
+          msg: `${itensProcessados.length} vales de reposição importados e processados com sucesso!`,
         });
         setTimeout(() => {
           setIsImportModalOpen(false);
@@ -276,7 +385,6 @@ export const ReposicaoView: React.FC = () => {
         return;
       }
 
-      // Detecta separador (tab ou ponto e vírgula ou vírgula)
       const primeiraLinha = linhas[0];
       const sep = primeiraLinha.includes('\t') ? '\t' : primeiraLinha.includes(';') ? ';' : ',';
       const cabecalhos = primeiraLinha.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
@@ -296,7 +404,7 @@ export const ReposicaoView: React.FC = () => {
       if (itensProcessados.length === 0) {
         setImportStatus({
           tipo: 'erro',
-          msg: 'Não foi possível identificar as colunas (Dt. Operacao, Descrição, Valor, Qtde, Embalagem).',
+          msg: 'Não foi possível identificar as colunas da planilha.',
         });
         return;
       }
@@ -340,7 +448,7 @@ export const ReposicaoView: React.FC = () => {
         if (itensProcessados.length === 0) {
           setJsonImportStatus({
             tipo: 'erro',
-            msg: 'Nenhum lançamento válido encontrado no JSON. Verifique as chaves: Dt. Operacao, Descrição, Valor, Qtde, Embalagem.',
+            msg: 'Nenhum lançamento válido encontrado no JSON. Verifique as chaves: item_numero, data_emissao, nota_fiscal, valor_total_prejuizo, etc.',
           });
           return;
         }
@@ -348,7 +456,7 @@ export const ReposicaoView: React.FC = () => {
         persistData(itensProcessados);
         setJsonImportStatus({
           tipo: 'sucesso',
-          msg: `${itensProcessados.length} lançamentos JSON importados e processados com sucesso!`,
+          msg: `${itensProcessados.length} vales de reposição JSON importados e processados com sucesso!`,
         });
         setTimeout(() => {
           setIsJsonModalOpen(false);
@@ -373,10 +481,8 @@ export const ReposicaoView: React.FC = () => {
 
     try {
       let trimmed = jsonColado.trim();
-      // Permite tanto objeto único quanto array de objetos ou múltiplos objetos
       let parsed: any;
       if (trimmed.startsWith('{') && !trimmed.endsWith(']')) {
-        // Se colar múltiplos objetos soltos tipo { ... }, { ... }
         if (!trimmed.endsWith('}')) {
           trimmed = `[${trimmed}]`;
         } else if (trimmed.includes('}\n{') || trimmed.includes('},\n{') || trimmed.includes('},{')) {
@@ -387,7 +493,6 @@ export const ReposicaoView: React.FC = () => {
       try {
         parsed = JSON.parse(trimmed);
       } catch {
-        // Tenta envolver entre colchetes caso seja objeto solto
         parsed = JSON.parse(`[${trimmed}]`);
       }
 
@@ -401,7 +506,7 @@ export const ReposicaoView: React.FC = () => {
       if (itensProcessados.length === 0) {
         setJsonImportStatus({
           tipo: 'erro',
-          msg: 'Não foi possível reconhecer os campos (Dt. Operacao, Descrição, Valor, Qtde, Embalagem).',
+          msg: 'Não foi possível reconhecer os campos do JSON de reposição.',
         });
         return;
       }
@@ -409,7 +514,7 @@ export const ReposicaoView: React.FC = () => {
       persistData(itensProcessados);
       setJsonImportStatus({
         tipo: 'sucesso',
-        msg: `${itensProcessados.length} registro(s) JSON importado(s) com sucesso!`,
+        msg: `${itensProcessados.length} vale(s) de reposição JSON importado(s) com sucesso!`,
       });
       setJsonColado('');
       setTimeout(() => {
@@ -425,18 +530,21 @@ export const ReposicaoView: React.FC = () => {
   // Salvar Novo Lançamento / Editar
   const handleSalvarItem = (e: React.FormEvent) => {
     e.preventDefault();
-    const valorNum = parseFloat(formNovo.valor.replace(',', '.')) || 0;
-    const qtdeNum = parseFloat(formNovo.qtde.replace(',', '.')) || 1;
+    const valorNum = parseFloat(formNovo.valorTotalPrejuizo.replace(',', '.')) || 0;
+    const volumeHLNum = parseFloat(formNovo.volumeTotalHL.replace(',', '.')) || 0.08;
+    const qtdeNum = parseFloat(formNovo.qtdItens.replace(',', '.')) || 1;
 
-    if (!formNovo.descricao.trim() || valorNum <= 0) {
-      alert('Preencha a descrição do produto e um valor válido.');
+    if (!formNovo.detalhamentoSkus.trim() || valorNum <= 0) {
+      alert('Preencha o detalhamento do SKU e um valor de prejuízo válido.');
       return;
     }
 
-    const dataIso = formNovo.dataOperacao || new Date().toISOString().slice(0, 10);
+    const dataIso = formNovo.dataEmissao || new Date().toISOString().slice(0, 10);
     const mesRef = dataIso.slice(0, 7);
     const [ano, mes] = mesRef.split('-');
     const mesNome = `${mes}/${ano}`;
+    const dataEmissaoBR = formatDataBR(dataIso);
+    const rateioNum = Number((valorNum / 2).toFixed(2));
 
     if (editItem) {
       const atualizados = itens.map((item) =>
@@ -444,30 +552,70 @@ export const ReposicaoView: React.FC = () => {
           ? {
               ...item,
               dataOperacao: dataIso,
+              data_emissao: dataEmissaoBR,
               mesRef,
               mesNome,
-              descricao: formNovo.descricao.trim().toUpperCase(),
+              nota_fiscal: formNovo.notaFiscal.trim() || item.nota_fiscal,
+              mapa_carga: formNovo.mapaCarga.trim() || item.mapa_carga,
+              rota_setor: formNovo.rotaSetor.trim() || item.rota_setor,
+              motorista: formNovo.motorista.trim().toUpperCase() || item.motorista,
+              cpf_motorista: formNovo.cpfMotorista.trim() || item.cpf_motorista,
+              ajudante_1: formNovo.ajudante1.trim().toUpperCase() || item.ajudante_1,
+              cpf_ajudante_1: formNovo.cpfAjudante1.trim() || item.cpf_ajudante_1,
+              ajudante_2: formNovo.ajudante2.trim() || item.ajudante_2,
+              equipe_completa: formNovo.ajudante1 || item.equipe_completa,
+              status_vale: formNovo.statusVale || item.status_vale,
+              volume_total_hl: volumeHLNum,
               valor: valorNum,
+              valor_total_prejuizo: valorNum,
+              valor_rateado_por_pessoa: rateioNum,
               qtde: qtdeNum,
-              embalagem: formNovo.embalagem || normalizarEmbalagem('', formNovo.descricao),
-              motivo: formNovo.motivo || 'Reposição Operacional',
-              observacao: formNovo.observacao || '',
+              qtd_itens: qtdeNum,
+              razao_social_cliente: formNovo.razaoSocialCliente.trim().toUpperCase() || item.razao_social_cliente,
+              detalhamento_skus: formNovo.detalhamentoSkus.trim().toUpperCase(),
+              descricao: formNovo.detalhamentoSkus.trim().toUpperCase(),
+              embalagem: formNovo.embalagem || normalizarEmbalagem('', formNovo.detalhamentoSkus),
+              motivo: formNovo.motivo || item.motivo,
+              observacao: formNovo.observacao || item.observacao,
             }
           : item
       );
       persistData(atualizados);
       setEditItem(null);
     } else {
+      const idSstr = formNovo.idValeSstr.trim() || `vale_hist_${1000 + itens.length + 1}`;
       const novoItem: ItemReposicao = {
-        id: `REP-${Date.now()}`,
+        id: idSstr,
+        id_vale_sstr: idSstr,
+        item_numero: itens.length + 1,
         dataOperacao: dataIso,
+        data_emissao: dataEmissaoBR,
         mesRef,
         mesNome,
-        descricao: formNovo.descricao.trim().toUpperCase(),
+        nota_fiscal: formNovo.notaFiscal.trim() || `${250000 + itens.length}`,
+        mapa_carga: formNovo.mapaCarga.trim() || `M${1050 + itens.length}`,
+        rota_setor: formNovo.rotaSetor.trim() || 'R111',
+        motorista: formNovo.motorista.trim().toUpperCase() || 'DANILLO PEREIRA DOS SANTOS SILVA',
+        cpf_motorista: formNovo.cpfMotorista.trim() || '713.650.714-64',
+        ajudante_1: formNovo.ajudante1.trim().toUpperCase() || 'GEOVANE ARAUJO DA SILVA',
+        cpf_ajudante_1: formNovo.cpfAjudante1.trim() || '099.123.694-75',
+        ajudante_2: formNovo.ajudante2.trim() || '-',
+        cpf_ajudante_2: 'Ausente',
+        equipe_completa: formNovo.ajudante1.trim() || 'GEOVANE ARAUJO DA SILVA',
+        status_vale: formNovo.statusVale || 'Compensado',
+        volume_total_hl: volumeHLNum,
         valor: valorNum,
+        valor_total_prejuizo: valorNum,
+        total_integrantes_rateio: '2 Integrante(s)',
+        valor_rateado_por_pessoa: rateioNum,
         qtde: qtdeNum,
-        embalagem: formNovo.embalagem || normalizarEmbalagem('', formNovo.descricao),
-        motivo: formNovo.motivo || 'Reposição Operacional',
+        qtd_itens: qtdeNum,
+        codigo_cliente: `CLI${3000 + itens.length}`,
+        razao_social_cliente: formNovo.razaoSocialCliente.trim().toUpperCase() || 'PONTO DE VENDA (PDV)',
+        detalhamento_skus: formNovo.detalhamentoSkus.trim().toUpperCase(),
+        descricao: formNovo.detalhamentoSkus.trim().toUpperCase(),
+        embalagem: formNovo.embalagem || normalizarEmbalagem('', formNovo.detalhamentoSkus),
+        motivo: formNovo.motivo || 'Avaria em Rota',
         observacao: formNovo.observacao || '',
         createdAt: new Date().toISOString(),
       };
@@ -475,24 +623,27 @@ export const ReposicaoView: React.FC = () => {
     }
 
     setIsNewModalOpen(false);
-    setFormNovo({
-      dataOperacao: new Date().toISOString().slice(0, 10),
-      descricao: '',
-      valor: '',
-      qtde: '',
-      embalagem: 'Lata',
-      motivo: 'Avaria em Movimentação',
-      observacao: '',
-    });
   };
 
   const handleAbrirEditar = (item: ItemReposicao) => {
     setEditItem(item);
     setFormNovo({
-      dataOperacao: item.dataOperacao,
-      descricao: item.descricao,
-      valor: String(item.valor),
-      qtde: String(item.qtde),
+      dataEmissao: item.dataOperacao,
+      notaFiscal: item.nota_fiscal || '',
+      mapaCarga: item.mapa_carga || '',
+      rotaSetor: item.rota_setor || 'R111',
+      motorista: item.motorista || '',
+      cpfMotorista: item.cpf_motorista || '',
+      ajudante1: item.ajudante_1 || '',
+      cpfAjudante1: item.cpf_ajudante_1 || '',
+      ajudante2: item.ajudante_2 || '-',
+      statusVale: item.status_vale || 'Compensado',
+      volumeTotalHL: String(item.volume_total_hl || 0.08),
+      valorTotalPrejuizo: String(item.valor),
+      qtdItens: String(item.qtde),
+      razaoSocialCliente: item.razao_social_cliente || 'PONTO DE VENDA (PDV)',
+      detalhamentoSkus: item.detalhamento_skus || item.descricao,
+      idValeSstr: item.id_vale_sstr || '',
       embalagem: item.embalagem,
       motivo: item.motivo || '',
       observacao: item.observacao || '',
@@ -501,17 +652,19 @@ export const ReposicaoView: React.FC = () => {
   };
 
   const handleExcluirItem = (id: string) => {
-    if (confirm('Deseja realmente excluir este lançamento de reposição?')) {
+    if (confirm('Deseja realmente excluir este vale de reposição?')) {
       const filtrados = itens.filter((i) => i.id !== id);
       persistData(filtrados);
     }
   };
 
   const handleRestaurarDemo = () => {
-    if (confirm('Deseja restaurar a planilha de reposição padrão de bebidas (dados 2026)?')) {
+    if (confirm('Deseja restaurar a base padrão de Vales de Reposição SSTR (dados 2026)?')) {
       persistData(DEMO_REPOSICAO_BEBIDAS);
       setFiltroMes('');
       setFiltroEmbalagem('');
+      setFiltroRota('');
+      setFiltroStatus('');
       setBuscaTermo('');
     }
   };
@@ -521,23 +674,23 @@ export const ReposicaoView: React.FC = () => {
       {/* Header Principal do Painel */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Módulo de Reposição de Bebidas
+                Módulo Oficial de Vales de Reposição (SSTR)
               </span>
               <span className="text-xs text-slate-400 font-mono">
-                AMBEV Logística & Armazém
+                AMBEV Logística & Distribuição
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <span>Painel de Reposição de Bebidas</span>
+              <span>Painel Executivo de Reposição de Bebidas</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-              Análise financeira de reposições por data de operação, identificação de produtos críticos, 
-              distribuição por formato de embalagem e diagnóstico executivo de anomalias.
+            <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl">
+              Análise operacional e financeira de sinistros, quebras e vales de reposição por rota, setor, 
+              motoristas, formato de embalagem, PDVs e rateios de equipe.
             </p>
           </div>
 
@@ -550,16 +703,16 @@ export const ReposicaoView: React.FC = () => {
                 setIsJsonModalOpen(true);
               }}
               className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/25 transition-all cursor-pointer transform hover:-translate-y-0.5"
-              title="Importar dados em formato JSON (Operacao ., Dt. Operacao, Emissao, Produto, Unidade, Descrição, Qtde, Valor, Embalagem)"
+              title="Importar JSON Oficial de Reposição (item_numero, data_emissao, nota_fiscal, mapa_carga, rota_setor, motorista, valor_total_prejuizo, etc.)"
             >
               <FileJson className="w-4 h-4 text-slate-950" />
-              <span>Importar JSON</span>
+              <span>Importar JSON SSTR</span>
             </button>
 
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold text-xs border border-amber-500/30 transition-all cursor-pointer"
-              title="Importar planilha Excel (.xlsx) ou CSV com as colunas Dt. Operacao, Descrição, Valor, Qtde e Embalagem"
+              title="Importar planilha Excel (.xlsx) ou CSV com as colunas oficiais"
             >
               <FileSpreadsheet className="w-4 h-4 text-amber-400" />
               <span>Importar Planilha</span>
@@ -569,12 +722,24 @@ export const ReposicaoView: React.FC = () => {
               onClick={() => {
                 setEditItem(null);
                 setFormNovo({
-                  dataOperacao: new Date().toISOString().slice(0, 10),
-                  descricao: '',
-                  valor: '',
-                  qtde: '',
+                  dataEmissao: new Date().toISOString().slice(0, 10),
+                  notaFiscal: '',
+                  mapaCarga: '',
+                  rotaSetor: 'R111',
+                  motorista: '',
+                  cpfMotorista: '',
+                  ajudante1: '',
+                  cpfAjudante1: '',
+                  ajudante2: '-',
+                  statusVale: 'Compensado',
+                  volumeTotalHL: '0.08',
+                  valorTotalPrejuizo: '',
+                  qtdItens: '1',
+                  razaoSocialCliente: 'PONTO DE VENDA (PDV)',
+                  detalhamentoSkus: '',
+                  idValeSstr: '',
                   embalagem: 'Lata',
-                  motivo: 'Avaria em Movimentação',
+                  motivo: 'Avaria em Rota',
                   observacao: '',
                 });
                 setIsNewModalOpen(true);
@@ -582,13 +747,13 @@ export const ReposicaoView: React.FC = () => {
               className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 text-amber-400" />
-              <span>Novo Lançamento</span>
+              <span>Novo Vale SSTR</span>
             </button>
 
             <button
               onClick={() => exportarParaCSV(itensFiltrados)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition-all cursor-pointer"
-              title="Exportar dados atuais para arquivo CSV"
+              title="Exportar dados atuais para arquivo CSV com todas as colunas"
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Exportar CSV</span>
@@ -597,7 +762,7 @@ export const ReposicaoView: React.FC = () => {
             <button
               onClick={handleRestaurarDemo}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs border border-slate-700/60 transition-all cursor-pointer"
-              title="Restaurar dados demonstrativos padrão"
+              title="Restaurar dados demonstrativos padrão de 2026"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Restaurar Demo</span>
@@ -606,14 +771,14 @@ export const ReposicaoView: React.FC = () => {
         </div>
       </div>
 
-      {/* 1. CARDS DE RESUMO (KPI CARDS) */}
+      {/* 1. CARDS DE RESUMO OPERACIONAL E FINANCEIRO (KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Valor Total Reposto */}
+        {/* Card 1: Valor Total Prejuízo (R$) */}
         <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-500/60 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-400/90">
-              Valor Total Reposto
+              Prejuízo Total em Reposição
             </span>
             <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
               <DollarSign className="w-5 h-5" />
@@ -624,23 +789,47 @@ export const ReposicaoView: React.FC = () => {
               {formatBRL(kpis.valorTotal)}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-              <span className="text-amber-400 font-semibold">
-                {dadosPorMes.length > 0 ? formatBRL(kpis.valorTotal / dadosPorMes.length) : 'R$ 0'}
+              <span className="text-emerald-400 font-semibold">
+                {formatBRL(kpis.totalCompensadoR$)}
               </span>
-              <span>média mensal</span>
+              <span>compensado ({formatPercent(kpis.valorTotal > 0 ? (kpis.totalCompensadoR$ / kpis.valorTotal) * 100 : 0)})</span>
             </div>
           </div>
         </div>
 
-        {/* Card 2: Número de Lançamentos */}
+        {/* Card 2: Volume Total Reposto (HL) */}
         <div className="bg-slate-900 border border-sky-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-sky-500/60 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/10 rounded-full blur-xl group-hover:bg-sky-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-sky-400/90">
-              Número de Lançamentos
+              Volume Total Reposto
             </span>
             <div className="w-9 h-9 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
-              <Layers className="w-5 h-5" />
+              <Droplet className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {formatHL(kpis.volumeTotalHL)}
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+              <span className="text-sky-400 font-semibold">
+                {formatNumber(kpis.quantidadeTotal)}
+              </span>
+              <span>caixas / volumes</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Total de Vales SSTR / Ocorrências */}
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-500/60 transition-all">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400/90">
+              Vales de Reposição
+            </span>
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <FileText className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
@@ -648,82 +837,197 @@ export const ReposicaoView: React.FC = () => {
               {formatNumber(kpis.totalLancamentos)}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-              <span className="text-sky-400 font-semibold">
-                {dadosPorMes.length > 0 ? (kpis.totalLancamentos / dadosPorMes.length).toFixed(1) : 0}
-              </span>
-              <span>ocorrências / mês</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Quantidade Total */}
-        <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-500/60 transition-all">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400/90">
-              Quantidade Total
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Boxes className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {formatNumber(kpis.quantidadeTotal)}{' '}
-              <span className="text-xs font-semibold text-slate-400">un/cx</span>
-            </div>
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
               <span className="text-emerald-400 font-semibold">
-                {kpis.totalLancamentos > 0 ? formatNumber(Math.round(kpis.quantidadeTotal / kpis.totalLancamentos)) : 0}
+                {formatBRL(kpis.ticketMedioLancamento)}
               </span>
-              <span>unidades por registro</span>
+              <span>prejuízo médio / vale</span>
             </div>
           </div>
         </div>
 
-        {/* Card 4: Ticket Médio */}
+        {/* Card 4: Rateio Médio por Pessoa */}
         <div className="bg-slate-900 border border-purple-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-purple-500/60 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-purple-400/90">
-              Ticket Médio
+              Rateio Médio / Pessoa
             </span>
             <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <TrendingUp className="w-5 h-5" />
+              <Users className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {formatBRL(kpis.ticketMedioLancamento)}
+              {formatBRL(kpis.mediaRateioPessoa)}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
               <span className="text-purple-300 font-semibold">
                 {formatBRL(kpis.ticketMedioUnidade)}
               </span>
-              <span>custo unitário médio</span>
+              <span>custo unitário / caixa</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2 & 3 & 4. SEÇÃO DE GRÁFICOS VISUAIS */}
+      {/* ACHADOS E DIAGNÓSTICO EXECUTIVO (3 CARDS) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card Achado 1: Mês de Pico */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-start gap-3">
+          <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+            <Flame className="w-5 h-5" />
+          </div>
+          <div className="text-xs">
+            <div className="font-bold text-amber-400 uppercase tracking-wide">Pico Operacional</div>
+            <div className="text-white font-semibold mt-0.5">{achados.pico.mes} — {formatBRL(achados.pico.valor)}</div>
+            <p className="text-slate-400 mt-1 leading-relaxed">{achados.pico.detalhe}</p>
+          </div>
+        </div>
+
+        {/* Card Achado 2: Formato & SKU Dominante */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-start gap-3">
+          <div className="p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 shrink-0">
+            <Boxes className="w-5 h-5" />
+          </div>
+          <div className="text-xs">
+            <div className="font-bold text-sky-400 uppercase tracking-wide">Embalagem Dominante</div>
+            <div className="text-white font-semibold mt-0.5">{achados.dominante.embalagem} ({formatPercent(achados.dominante.percentualEmbalagem)})</div>
+            <p className="text-slate-400 mt-1 leading-relaxed">{achados.dominante.detalhe}</p>
+          </div>
+        </div>
+
+        {/* Card Achado 3: Rota Mais Crítica */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-start gap-3">
+          <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
+            <Truck className="w-5 h-5" />
+          </div>
+          <div className="text-xs">
+            <div className="font-bold text-rose-400 uppercase tracking-wide">Rota Mais Crítica</div>
+            <div className="text-white font-semibold mt-0.5">Rota {achados.rotaCritica.rota} ({formatBRL(achados.rotaCritica.valor)})</div>
+            <p className="text-slate-400 mt-1 leading-relaxed">{achados.rotaCritica.detalhe}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* FILTROS E BUSCA */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Busca Rápida */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar por Motorista, Rota, SKU, NF, Vale SSTR, PDV Cliente ou Ajudante..."
+              value={buscaTermo}
+              onChange={(e) => setBuscaTermo(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+            />
+            {buscaTermo && (
+              <button
+                onClick={() => setBuscaTermo('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Dropdowns de Filtro */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtro Mês */}
+            <select
+              value={filtroMes}
+              onChange={(e) => setFiltroMes(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Todos os Meses</option>
+              {mesesDisponiveis.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+
+            {/* Filtro Rota */}
+            <select
+              value={filtroRota}
+              onChange={(e) => setFiltroRota(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Todas as Rotas</option>
+              {rotasDisponiveis.map((r) => (
+                <option key={r} value={r}>
+                  Rota {r}
+                </option>
+              ))}
+            </select>
+
+            {/* Filtro Embalagem */}
+            <select
+              value={filtroEmbalagem}
+              onChange={(e) => setFiltroEmbalagem(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Todas Embalagens</option>
+              {embalagensDisponiveis.map((emb) => (
+                <option key={emb} value={emb}>
+                  {emb}
+                </option>
+              ))}
+            </select>
+
+            {/* Filtro Status */}
+            <select
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value)}
+              className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Todos os Status</option>
+              {statusDisponiveis.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+
+            {/* Limpar Filtros */}
+            {(filtroMes || filtroEmbalagem || filtroRota || filtroStatus || buscaTermo) && (
+              <button
+                onClick={() => {
+                  setFiltroMes('');
+                  setFiltroEmbalagem('');
+                  setFiltroRota('');
+                  setFiltroStatus('');
+                  setBuscaTermo('');
+                }}
+                className="px-2.5 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold border border-rose-500/20 transition-colors"
+                title="Limpar todos os filtros"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 2 & 3 & 4. SEÇÃO DE GRÁFICOS ANALÍTICOS REVISADOS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* GRÁFICO 1: Valor Reposto por Mês (Dt. Operacao) */}
+        {/* GRÁFICO 1: Evolução Mensal de Reposição (Valor R$ vs Volume HL) */}
         <div className="lg:col-span-12 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-amber-400" />
-                <span>Valor Reposto por Mês (Dt. Operação)</span>
+                <span>Evolução Mensal do Prejuízo de Reposição e Volume (HL)</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Evolução mensal do montante financeiro reposto com destaque para o mês de pico
+                Histórico temporal de vales de reposição emitidos, volume físico avariado e montante financeiro
               </p>
             </div>
             {achados.pico && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 rounded-lg text-xs font-bold text-amber-300 self-start sm:self-auto">
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
-                <span>Pico: {achados.pico.mes} ({formatBRL(achados.pico.valor)})</span>
+                <span>Pico: {achados.pico.mes} ({formatBRL(achados.pico.valor)} | {formatHL(achados.pico.volumeHL)})</span>
               </div>
             )}
           </div>
@@ -741,7 +1045,7 @@ export const ReposicaoView: React.FC = () => {
                   <YAxis
                     stroke="#94a3b8"
                     tick={{ fill: '#cbd5e1', fontSize: 11 }}
-                    tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
+                    tickFormatter={(val) => `R$ ${val}`}
                   />
                   <Tooltip
                     content={({ active, payload }) => {
@@ -758,13 +1062,13 @@ export const ReposicaoView: React.FC = () => {
                               )}
                             </div>
                             <div className="text-white font-semibold">
-                              Valor Reposto: <span className="text-amber-300">{formatBRL(d.valorTotal)}</span>
+                              Prejuízo Total: <span className="text-amber-300">{formatBRL(d.valorTotal)}</span>
                             </div>
-                            <div className="text-slate-300">
-                              Quantidade: {formatNumber(d.qtdeTotal)} un/cx
+                            <div className="text-sky-300 font-semibold">
+                              Volume: {formatHL(d.volumeHL)} ({formatNumber(d.qtdeTotal)} caixas)
                             </div>
                             <div className="text-slate-400">
-                              Lançamentos: {d.totalLancamentos} registros
+                              Vales Emitidos: {d.totalLancamentos} ocorrências
                             </div>
                           </div>
                         );
@@ -772,7 +1076,7 @@ export const ReposicaoView: React.FC = () => {
                       return null;
                     }}
                   />
-                  <Bar dataKey="valorTotal" name="Valor Reposto (R$)" radius={[6, 6, 0, 0]}>
+                  <Bar dataKey="valorTotal" name="Prejuízo (R$)" radius={[6, 6, 0, 0]}>
                     {dadosPorMes.map((entry, index) => (
                       <Cell
                         key={`cell-mes-${index}`}
@@ -791,28 +1095,28 @@ export const ReposicaoView: React.FC = () => {
           </div>
         </div>
 
-        {/* GRÁFICO 2: Top 8 Produtos de Maior Valor Reposto (Horizontal) */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+        {/* GRÁFICO 2: Top Rotas / Setores com Maior Prejuízo */}
+        <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
           <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                <Flame className="w-4 h-4 text-rose-400" />
-                <span>Top 8 Produtos de Maior Valor Reposto</span>
+                <Truck className="w-4 h-4 text-rose-400" />
+                <span>Top Rotas / Setores com Maior Prejuízo</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Ranking dos SKUs mais críticos com ordenação horizontal e participação percentual
+                Identificação dos trechos de distribuição com maior índice de quebras
               </p>
             </div>
-            <span className="text-[11px] font-mono font-bold text-slate-400 px-2 py-0.5 bg-slate-800 rounded">
-              TOP 8 SKUs
+            <span className="text-[11px] font-mono font-bold text-rose-400 px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded">
+              Rotas Críticas
             </span>
           </div>
 
-          <div className="h-80 w-full">
-            {dadosTop8.length > 0 ? (
+          <div className="h-72 w-full">
+            {dadosTopRotas.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={dadosTop8}
+                  data={dadosTopRotas}
                   layout="vertical"
                   margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
                 >
@@ -821,15 +1125,14 @@ export const ReposicaoView: React.FC = () => {
                     type="number"
                     stroke="#94a3b8"
                     tick={{ fill: '#cbd5e1', fontSize: 11 }}
-                    tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
+                    tickFormatter={(val) => `R$ ${val}`}
                   />
                   <YAxis
                     type="category"
-                    dataKey="descricao"
+                    dataKey="rota"
                     stroke="#94a3b8"
-                    tick={{ fill: '#e2e8f0', fontSize: 10 }}
-                    width={140}
-                    tickFormatter={(str) => (str.length > 18 ? `${str.slice(0, 18)}...` : str)}
+                    tick={{ fill: '#e2e8f0', fontSize: 11 }}
+                    width={70}
                   />
                   <Tooltip
                     content={({ active, payload }) => {
@@ -837,59 +1140,44 @@ export const ReposicaoView: React.FC = () => {
                         const d = payload[0].payload;
                         return (
                           <div className="bg-slate-950 border border-slate-700 p-3 rounded-lg shadow-xl text-xs space-y-1">
-                            <div className="font-bold text-white">
-                              #{d.ranking} - {d.descricao}
+                            <div className="font-bold text-rose-400">Rota {d.rota}</div>
+                            <div className="text-white font-semibold">
+                              Prejuízo: {formatBRL(d.valorTotal)} ({formatPercent(d.percentual)})
                             </div>
-                            <div className="text-amber-300 font-semibold">
-                              Valor Reposto: {formatBRL(d.valorTotal)} ({formatPercent(d.percentual)})
-                            </div>
-                            <div className="text-slate-300">
-                              Quantidade: {formatNumber(d.qtdeTotal)} unidades
-                            </div>
-                            <div className="text-slate-400">
-                              Embalagem: {d.embalagem}
-                            </div>
+                            <div className="text-sky-300">Volume: {formatHL(d.volumeHL)}</div>
+                            <div className="text-slate-400">Vales: {d.totalLancamentos} ocorrências</div>
                           </div>
                         );
                       }
                       return null;
                     }}
                   />
-                  <Bar dataKey="valorTotal" name="Valor Reposto (R$)" radius={[0, 6, 6, 0]}>
-                    {dadosTop8.map((entry, index) => {
-                      const colors = [
-                        '#ef4444', // 1º Red 500
-                        '#f97316', // 2º Orange 500
-                        '#f59e0b', // 3º Amber 500
-                        '#eab308', // 4º Yellow 500
-                        '#10b981', // 5º Emerald 500
-                        '#06b6d4', // 6º Cyan 500
-                        '#3b82f6', // 7º Blue 500
-                        '#8b5cf6', // 8º Violet 500
-                      ];
-                      return <Cell key={`cell-top-${index}`} fill={colors[index % colors.length]} />;
+                  <Bar dataKey="valorTotal" name="Prejuízo (R$)" radius={[0, 6, 6, 0]}>
+                    {dadosTopRotas.map((entry, index) => {
+                      const cores = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#38bdf8', '#8b5cf6'];
+                      return <Cell key={`cell-rota-${index}`} fill={cores[index % cores.length]} />;
                     })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-500">
-                Nenhum produto registrado.
+                Nenhuma rota registrada.
               </div>
             )}
           </div>
         </div>
 
-        {/* GRÁFICO 3: Valor Reposto por Tipo de Embalagem / Formato (Agrupado em Outros) */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+        {/* GRÁFICO 3: Prejuízo por Tipo de Embalagem / Formato */}
+        <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
           <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                 <Boxes className="w-4 h-4 text-emerald-400" />
-                <span>Valor Reposto por Embalagem</span>
+                <span>Prejuízo por Formato de Embalagem</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Lata, Garrafa Inteira, Litrão etc. (menores agrupados em "Outros")
+                Lata, Garrafa Inteira, Litrão, Long Neck, PET e Barril Chopp
               </p>
             </div>
             <span className="text-[11px] font-mono font-bold text-emerald-400 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded">
@@ -897,7 +1185,7 @@ export const ReposicaoView: React.FC = () => {
             </span>
           </div>
 
-          <div className="h-80 w-full">
+          <div className="h-72 w-full">
             {dadosPorEmbalagem.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -909,14 +1197,14 @@ export const ReposicaoView: React.FC = () => {
                     dataKey="embalagem"
                     stroke="#94a3b8"
                     tick={{ fill: '#cbd5e1', fontSize: 10 }}
-                    angle={-20}
+                    angle={-15}
                     textAnchor="end"
                     interval={0}
                   />
                   <YAxis
                     stroke="#94a3b8"
                     tick={{ fill: '#cbd5e1', fontSize: 11 }}
-                    tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
+                    tickFormatter={(val) => `R$ ${val}`}
                   />
                   <Tooltip
                     content={({ active, payload }) => {
@@ -932,21 +1220,18 @@ export const ReposicaoView: React.FC = () => {
                               <span>{d.embalagem}</span>
                             </div>
                             <div className="text-amber-300 font-semibold">
-                              Valor Reposto: {formatBRL(d.valorTotal)} ({formatPercent(d.percentual)})
+                              Prejuízo: {formatBRL(d.valorTotal)} ({formatPercent(d.percentual)})
                             </div>
-                            <div className="text-slate-300">
-                              Quantidade: {formatNumber(d.qtdeTotal)} un/cx
-                            </div>
-                            <div className="text-slate-400">
-                              Lançamentos: {d.totalLancamentos} ocorrências
-                            </div>
+                            <div className="text-sky-300">Volume: {formatHL(d.volumeHL)}</div>
+                            <div className="text-slate-300">Quantidade: {formatNumber(d.qtdeTotal)} cx/un</div>
+                            <div className="text-slate-400">Vales: {d.totalLancamentos} ocorrências</div>
                           </div>
                         );
                       }
                       return null;
                     }}
                   />
-                  <Bar dataKey="valorTotal" name="Valor Reposto" radius={[6, 6, 0, 0]}>
+                  <Bar dataKey="valorTotal" name="Prejuízo" radius={[6, 6, 0, 0]}>
                     {dadosPorEmbalagem.map((entry, index) => (
                       <Cell
                         key={`cell-emb-${index}`}
@@ -963,12 +1248,363 @@ export const ReposicaoView: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* GRÁFICO 4: Top 8 SKUs / Bebidas Repostas (Horizontal) */}
+        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-400" />
+                <span>Top 8 SKUs de Maior Impacto em Reposição</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Ranking detalhado por produto e formato com custos acumulados
+              </p>
+            </div>
+            <span className="text-[11px] font-mono font-bold text-slate-400 px-2 py-0.5 bg-slate-800 rounded">
+              TOP SKUs
+            </span>
+          </div>
+
+          <div className="h-80 w-full">
+            {dadosTop8.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={dadosTop8}
+                  layout="vertical"
+                  margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
+                  <XAxis
+                    type="number"
+                    stroke="#94a3b8"
+                    tick={{ fill: '#cbd5e1', fontSize: 11 }}
+                    tickFormatter={(val) => `R$ ${val}`}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="descricao"
+                    stroke="#94a3b8"
+                    tick={{ fill: '#e2e8f0', fontSize: 10 }}
+                    width={150}
+                    tickFormatter={(str) => (str.length > 18 ? `${str.slice(0, 18)}...` : str)}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-slate-950 border border-slate-700 p-3 rounded-lg shadow-xl text-xs space-y-1">
+                            <div className="font-bold text-white">
+                              #{d.ranking} - {d.descricao}
+                            </div>
+                            <div className="text-amber-300 font-semibold">
+                              Prejuízo: {formatBRL(d.valorTotal)} ({formatPercent(d.percentual)})
+                            </div>
+                            <div className="text-sky-300">Volume: {formatHL(d.volumeHL)} ({formatNumber(d.qtdeTotal)} cx)</div>
+                            <div className="text-slate-400">Embalagem: {d.embalagem}</div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="valorTotal" name="Prejuízo (R$)" radius={[0, 6, 6, 0]}>
+                    {dadosTop8.map((entry, index) => {
+                      const colors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6'];
+                      return <Cell key={`cell-top-${index}`} fill={colors[index % colors.length]} />;
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                Nenhum produto registrado.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* GRÁFICO 5: Status dos Vales & Motoristas em Rateio */}
+        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-purple-400" />
+                  <span>Status dos Vales & Compensações</span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Distribuição de vales Compensados, Pendentes e em análise
+                </p>
+              </div>
+            </div>
+
+            {/* Badges de Status */}
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              {dadosStatusVales.map((st) => (
+                <div
+                  key={st.status}
+                  className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between"
+                >
+                  <div>
+                    <div className="text-[11px] text-slate-400">{st.status}</div>
+                    <div className="text-sm font-bold text-white">{formatBRL(st.valorTotal)}</div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                    {st.totalLancamentos} vales
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Mini Ranking Motoristas */}
+            <div>
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-amber-400" />
+                <span>Equipes & Condutores com Maior Rateio</span>
+              </div>
+              <div className="space-y-2">
+                {dadosTopMotoristas.slice(0, 4).map((mot) => (
+                  <div
+                    key={mot.motorista}
+                    className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs"
+                  >
+                    <div className="truncate max-w-[180px]">
+                      <div className="font-semibold text-white truncate">{mot.motorista}</div>
+                      <div className="text-[10px] text-slate-400">{mot.totalLancamentos} ocorrências | {formatHL(mot.volumeHL)}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-bold text-amber-400">{formatBRL(mot.valorTotal)}</div>
+                      <div className="text-[10px] text-purple-300 font-mono">rateio {formatBRL(mot.valorRateado)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. TABELA COMPLETA DE VALES DE REPOSIÇÃO (SSTR) - RECOLHIDA POR PADRÃO */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 shadow-lg transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-white">
+                  Auditoria e Vales de Reposição
+                </h2>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-amber-400 border border-slate-700">
+                  {itensOrdenados.length} lançamentos
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {mostrarTabela
+                  ? 'Visualização expandida de todos os vales SSTR com detalhes fiscais e rateio de equipe.'
+                  : 'Detalhamento individual de vales, equipes e notas fiscais oculto para priorizar os gráficos e KPIs executivos.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {mostrarTabela && (
+              <div className="flex items-center gap-1.5 mr-2">
+                <span className="text-[11px] text-slate-400">Ordenar:</span>
+                <select
+                  value={ordenacao}
+                  onChange={(e: any) => setOrdenacao(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500"
+                >
+                  <option value="data-desc">Mais Recentes</option>
+                  <option value="data-asc">Mais Antigos</option>
+                  <option value="valor-desc">Maior Prejuízo (R$)</option>
+                  <option value="valor-asc">Menor Prejuízo (R$)</option>
+                  <option value="volume-desc">Maior Volume (HL)</option>
+                  <option value="qtde-desc">Maior Quantidade</option>
+                </select>
+              </div>
+            )}
+
+            <button
+              onClick={() => setMostrarTabela(!mostrarTabela)}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                mostrarTabela
+                  ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+            >
+              {mostrarTabela ? (
+                <>
+                  <ChevronUp className="w-4 h-4 text-slate-400" />
+                  <span>Ocultar Registros</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 text-amber-400" />
+                  <span>Exibir Tabela de Vales ({itensOrdenados.length})</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Tabela Responsiva exibida apenas quando expandida */}
+        {mostrarTabela && (
+          <div className="mt-4 overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-3 px-3">Data / Vale</th>
+                  <th className="py-3 px-3">Rota / NF</th>
+                  <th className="py-3 px-3">Motorista & Equipe</th>
+                  <th className="py-3 px-3">PDV / Cliente</th>
+                  <th className="py-3 px-3">Detalhamento SKU</th>
+                  <th className="py-3 px-3 text-right">Volume</th>
+                  <th className="py-3 px-3 text-right">Prejuízo</th>
+                  <th className="py-3 px-3 text-right">Rateio/Pessoa</th>
+                  <th className="py-3 px-3 text-center">Status</th>
+                  <th className="py-3 px-3 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {itensOrdenados.length > 0 ? (
+                  itensOrdenados.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-800/40 transition-colors group">
+                      {/* Data / Vale */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="font-semibold text-white">{item.data_emissao || formatDataBR(item.dataOperacao)}</div>
+                        <div className="text-[10px] text-amber-400 font-mono">{item.id_vale_sstr || item.id}</div>
+                      </td>
+
+                      {/* Rota / NF */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 font-bold text-rose-400">
+                          <MapPin className="w-3 h-3 text-rose-500" />
+                          <span>Rota {item.rota_setor || 'R101'}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          NF: {item.nota_fiscal || '-'} | Carga: {item.mapa_carga || '-'}
+                        </div>
+                      </td>
+
+                      {/* Motorista & Equipe */}
+                      <td className="py-3 px-3 max-w-[160px]">
+                        <div className="font-medium text-slate-200 truncate">{item.motorista}</div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          Aj: {item.ajudante_1 || item.equipe_completa || '-'}
+                        </div>
+                      </td>
+
+                      {/* PDV / Cliente */}
+                      <td className="py-3 px-3 max-w-[150px]">
+                        <div className="text-slate-300 truncate font-medium">
+                          {item.razao_social_cliente || 'PDV BALCÃO'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {item.codigo_cliente || '-'}
+                        </div>
+                      </td>
+
+                      {/* Detalhamento SKU */}
+                      <td className="py-3 px-3 max-w-[200px]">
+                        <div className="font-medium text-white truncate" title={item.detalhamento_skus || item.descricao}>
+                          {item.detalhamento_skus || item.descricao}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className="px-1.5 py-0.2 rounded text-[10px] font-semibold"
+                            style={{
+                              backgroundColor: `${CORES_EMBALAGEM[item.embalagem] || '#64748b'}20`,
+                              color: CORES_EMBALAGEM[item.embalagem] || '#94a3b8',
+                            }}
+                          >
+                            {item.embalagem}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {item.qtde} {item.qtde > 1 ? 'caixas' : 'caixa'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Volume HL */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap font-mono text-sky-400 font-semibold">
+                        {formatHL(item.volume_total_hl)}
+                      </td>
+
+                      {/* Prejuízo R$ */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap font-bold text-amber-400">
+                        {formatBRL(item.valor)}
+                      </td>
+
+                      {/* Rateio */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap font-mono text-purple-300">
+                        {formatBRL(item.valor_rateado_por_pessoa || item.valor / 2)}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                          style={{
+                            backgroundColor: `${CORES_STATUS[item.status_vale || 'Compensado'] || '#10b981'}20`,
+                            color: CORES_STATUS[item.status_vale || 'Compensado'] || '#10b981',
+                            border: `1px solid ${CORES_STATUS[item.status_vale || 'Compensado'] || '#10b981'}40`,
+                          }}
+                        >
+                          {item.status_vale || 'Compensado'}
+                        </span>
+                      </td>
+
+                      {/* Ações */}
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => setItemDetalhes(item)}
+                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 transition-colors"
+                            title="Ver Detalhes do Vale SSTR"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleAbrirEditar(item)}
+                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-colors"
+                            title="Editar Lançamento"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleExcluirItem(item.id)}
+                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-rose-300 transition-colors"
+                            title="Excluir Lançamento"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-xs text-slate-500">
+                      Nenhum vale de reposição encontrado com os filtros selecionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* MODAL 1: IMPORTAR PLANILHA EXCEL / CSV / COLAR */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
@@ -1016,12 +1652,12 @@ export const ReposicaoView: React.FC = () => {
                 <Info className="w-3.5 h-3.5" />
                 <span>Colunas Reconhecidas Automaticamente:</span>
               </div>
-              <p className="text-slate-400">
-                • <strong>Dt. Operacao</strong> (ou Data, Data Operacao)<br />
-                • <strong>Descrição</strong> (ou Descricao, Produto, Mercadoria)<br />
-                • <strong>Valor</strong> (ou Valor Reposicao, Custo, Preço)<br />
-                • <strong>Qtde</strong> (ou Quantidade, Qtd, Unidades)<br />
-                • <strong>Embalagem</strong> (ou Formato, Tipo - caso não preenchido, será inferido do produto)
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                • <strong>Data / Dt. Operacao / data_emissao</strong><br />
+                • <strong>Nota Fiscal / Mapa Carga / Rota Setor</strong><br />
+                • <strong>Motorista / Ajudante 1 / Ajudante 2</strong><br />
+                • <strong>Valor / Prejuízo / valor_total_prejuizo</strong><br />
+                • <strong>Volume HL / Qtde / Detalhamento SKUs / Embalagem</strong>
               </p>
             </div>
 
@@ -1053,7 +1689,7 @@ export const ReposicaoView: React.FC = () => {
               <div className="relative flex py-2 items-center">
                 <div className="flex-grow border-t border-slate-800" />
                 <span className="flex-shrink mx-4 text-xs text-slate-500 uppercase font-semibold">
-                  ou cole dados copiados do Excel
+                  ou cole dados copiados da planilha
                 </span>
                 <div className="flex-grow border-t border-slate-800" />
               </div>
@@ -1063,7 +1699,7 @@ export const ReposicaoView: React.FC = () => {
                 <textarea
                   value={textoColado}
                   onChange={(e) => setTextoColado(e.target.value)}
-                  placeholder="Copie as células do Excel (incluindo o cabeçalho) e cole aqui..."
+                  placeholder="Copie as células do Excel (incluindo cabeçalho) e cole aqui..."
                   rows={4}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500 placeholder:text-slate-600 custom-scrollbar"
                 />
@@ -1081,10 +1717,10 @@ export const ReposicaoView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: IMPORTAR JSON */}
+      {/* MODAL 2: IMPORTAR JSON OFICIAL SSTR */}
       {isJsonModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
@@ -1092,13 +1728,13 @@ export const ReposicaoView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>Importar Lançamentos via JSON</span>
+                    <span>Importar JSON Oficial de Reposição</span>
                     <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
-                      Estruturado
+                      Modelo SSTR Ambev
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Carregue um arquivo .json ou cole os objetos/array com a estrutura da planilha
+                    Carregue arquivo .json ou cole o objeto/array conforme o esquema especificado
                   </p>
                 </div>
               </div>
@@ -1131,40 +1767,27 @@ export const ReposicaoView: React.FC = () => {
               </div>
             )}
 
-            {/* Exemplo de Formato Aceito */}
+            {/* Exemplo de Formato Aceito com Botão de Auto-Preenchimento */}
             <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 mb-4 text-xs">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-bold text-amber-400 flex items-center gap-1.5">
                   <Code2 className="w-4 h-4" />
-                  <span>Formato JSON Suportado:</span>
+                  <span>Modelo JSON Oficial Requerido:</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const exemplo = `[\n  {\n    "Operacao .": 39,\n    "Dt. Operacao": "2026-01-09",\n    "Emissao": "2026-01-12",\n    "Produto": 9068,\n    "Unidade": "cx",\n    "Descrição": "SKOL LATA 350ML SH C/",\n    "Qtde": 1,\n    "Valor": 51.15,\n    "Embalagem": "LATA 355ML"\n  }\n]`;
-                    setJsonColado(exemplo);
+                    setJsonColado(EXEMPLO_JSON_OFICIAL);
                   }}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline cursor-pointer"
+                  className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline cursor-pointer font-bold"
                 >
                   <Copy className="w-3 h-3" />
-                  <span>Preencher Exemplo</span>
+                  <span>Preencher Exemplo Oficial</span>
                 </button>
               </div>
 
-              <pre className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono text-[11px] overflow-x-auto leading-tight custom-scrollbar">
-{`[
-  {
-    "Operacao .": 39,
-    "Dt. Operacao": "2026-01-09",
-    "Emissao": "2026-01-12",
-    "Produto": 9068,
-    "Unidade": "cx",
-    "Descrição": "SKOL LATA 350ML SH C/",
-    "Qtde": 1,
-    "Valor": 51.15,
-    "Embalagem": "LATA 355ML"
-  }
-]`}
+              <pre className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono text-[11px] overflow-x-auto leading-tight custom-scrollbar max-h-36">
+{EXEMPLO_JSON_OFICIAL}
               </pre>
             </div>
 
@@ -1196,7 +1819,7 @@ export const ReposicaoView: React.FC = () => {
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-800" />
                 <span className="flex-shrink mx-4 text-[11px] text-slate-500 uppercase font-semibold">
-                  ou cole o código JSON abaixo
+                  ou cole a estrutura JSON abaixo
                 </span>
                 <div className="flex-grow border-t border-slate-800" />
               </div>
@@ -1206,13 +1829,13 @@ export const ReposicaoView: React.FC = () => {
                 <textarea
                   value={jsonColado}
                   onChange={(e) => setJsonColado(e.target.value)}
-                  placeholder={`Cole aqui o JSON no formato:\n{\n  "Operacao .": 39,\n  "Dt. Operacao": "2026-01-09",\n  "Emissao": "2026-01-12",\n  "Produto": 9068,\n  "Unidade": "cx",\n  "Descrição": "SKOL LATA 350ML SH C/",\n  "Qtde": 1,\n  "Valor": 51.15,\n  "Embalagem": "LATA 355ML"\n}`}
+                  placeholder={`Cole aqui o JSON de Reposição no formato:\n{\n  "item_numero": 1,\n  "data_emissao": "14/01/2026",\n  "nota_fiscal": "252161",\n  "mapa_carga": "M1055",\n  "rota_setor": "R111",\n  "motorista": "DANILLO PEREIRA DOS SANTOS SILVA",\n  "valor_total_prejuizo": 57.04,\n  "volume_total_hl": 0.08,\n  "detalhamento_skus": "9068 - SKOL LATA 350ML SH C/12 NPAL (2 CX)"\n}`}
                   rows={6}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500 placeholder:text-slate-600 custom-scrollbar"
                 />
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-[11px] text-slate-400">
-                    Aceita objeto único <code>{`{...}`}</code> ou lista <code>{`[{...}, {...}]`}</code>
+                    Suporta objeto único <code>{`{...}`}</code> ou lista <code>{`[{...}, {...}]`}</code>
                   </span>
                   <button
                     onClick={handleProcessarJsonColado}
@@ -1227,14 +1850,162 @@ export const ReposicaoView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: NOVO LANÇAMENTO MANUAL / EDITAR */}
+      {/* MODAL 3: AUDITORIA / DETALHES COMPLETOS DO VALE SSTR */}
+      {itemDetalhes && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Vale de Reposição: {itemDetalhes.id_vale_sstr || itemDetalhes.id}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Comprovante operacional de avaria e rateio de rota
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setItemDetalhes(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Bloco 1: Identificação Operacional */}
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-bold text-amber-400 uppercase text-[10px] tracking-wider">
+                  Dados do Sinistro / Emissão
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-300">
+                  <div>
+                    <span className="text-slate-500 block">Data Emissão:</span>
+                    <strong className="text-white">{itemDetalhes.data_emissao || itemDetalhes.dataOperacao}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Nota Fiscal:</span>
+                    <strong className="text-white font-mono">{itemDetalhes.nota_fiscal || '-'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Mapa de Carga:</span>
+                    <strong className="text-white font-mono">{itemDetalhes.mapa_carga || '-'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Rota / Setor:</span>
+                    <strong className="text-rose-400 font-bold">{itemDetalhes.rota_setor || '-'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Status do Vale:</span>
+                    <strong className="text-emerald-400">{itemDetalhes.status_vale || 'Compensado'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Item Linha:</span>
+                    <strong className="text-white font-mono">#{itemDetalhes.item_numero || 1}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco 2: Equipe de Transporte e Rateio */}
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-bold text-purple-400 uppercase text-[10px] tracking-wider flex items-center justify-between">
+                  <span>Equipe & Rateio Financeiro</span>
+                  <span className="text-slate-400 font-normal">{itemDetalhes.total_integrantes_rateio || '2 Integrante(s)'}</span>
+                </div>
+                <div className="space-y-1.5 text-slate-300">
+                  <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                    <span className="text-slate-400">Motorista Responsável:</span>
+                    <span className="font-semibold text-white">{itemDetalhes.motorista}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                    <span className="text-slate-400">CPF Motorista:</span>
+                    <span className="font-mono text-slate-300">{itemDetalhes.cpf_motorista || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                    <span className="text-slate-400">Ajudante 1:</span>
+                    <span className="font-semibold text-white">{itemDetalhes.ajudante_1 || '-'}</span>
+                  </div>
+                  {itemDetalhes.ajudante_2 && itemDetalhes.ajudante_2 !== '-' && (
+                    <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                      <span className="text-slate-400">Ajudante 2:</span>
+                      <span className="font-semibold text-white">{itemDetalhes.ajudante_2}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center py-1 text-purple-300 font-bold bg-purple-500/10 px-2 rounded">
+                    <span>Valor Rateado por Pessoa:</span>
+                    <span>{formatBRL(itemDetalhes.valor_rateado_por_pessoa || itemDetalhes.valor / 2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco 3: Cliente PDV e Produto */}
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-bold text-sky-400 uppercase text-[10px] tracking-wider">
+                  Ponto de Venda & Mercadoria
+                </div>
+                <div className="space-y-1 text-slate-300">
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Cliente Atendido:</span>
+                    <strong className="text-white">{itemDetalhes.razao_social_cliente || 'PONTO DE VENDA (PDV)'}</strong>
+                    <span className="text-slate-400 ml-2 font-mono text-[10px]">({itemDetalhes.codigo_cliente || 'CLI-PDV'})</span>
+                  </div>
+                  <div className="pt-2">
+                    <span className="text-slate-500 block text-[10px]">Detalhamento SKUs:</span>
+                    <p className="p-2 bg-slate-900 border border-slate-800 rounded text-amber-300 font-medium font-mono text-[11px]">
+                      {itemDetalhes.detalhamento_skus || itemDetalhes.descricao}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco 4: Resumo Financeiro */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center">
+                  <span className="text-slate-400 block text-[10px]">Prejuízo Total</span>
+                  <strong className="text-amber-400 text-sm font-bold">{formatBRL(itemDetalhes.valor)}</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/30 text-center">
+                  <span className="text-slate-400 block text-[10px]">Volume Físico</span>
+                  <strong className="text-sky-400 text-sm font-bold">{formatHL(itemDetalhes.volume_total_hl)}</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-center">
+                  <span className="text-slate-400 block text-[10px]">Quantidade</span>
+                  <strong className="text-emerald-400 text-sm font-bold">{itemDetalhes.qtde} cx/un</strong>
+                </div>
+              </div>
+
+              {itemDetalhes.observacao && (
+                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">
+                  <strong className="text-slate-300">Observações: </strong>
+                  {itemDetalhes.observacao}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-4 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setItemDetalhes(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: NOVO LANÇAMENTO MANUAL / EDITAR */}
       {isNewModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Package className="w-5 h-5 text-amber-400" />
-                <span>{editItem ? 'Editar Lançamento' : 'Novo Lançamento de Reposição'}</span>
+                <span>{editItem ? 'Editar Vale de Reposição' : 'Novo Vale de Reposição (SSTR)'}</span>
               </h3>
               <button
                 onClick={() => setIsNewModalOpen(false)}
@@ -1244,60 +2015,158 @@ export const ReposicaoView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSalvarItem} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">
-                  Dt. Operação *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formNovo.dataOperacao}
-                  onChange={(e) => setFormNovo((p) => ({ ...p, dataOperacao: e.target.value }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">
-                  Descrição (Produto) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: BRAHMA DUPLO MALTE 350ML LATA"
-                  value={formNovo.descricao}
-                  onChange={(e) => setFormNovo((p) => ({ ...p, descricao: e.target.value }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 uppercase"
-                />
-              </div>
-
+            <form onSubmit={handleSalvarItem} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">
-                    Valor Reposto (R$) *
+                    Data Emissão *
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="date"
                     required
-                    placeholder="0.00"
-                    value={formNovo.valor}
-                    onChange={(e) => setFormNovo((p) => ({ ...p, valor: e.target.value }))}
+                    value={formNovo.dataEmissao}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, dataEmissao: e.target.value }))}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">
-                    Quantidade (Qtde) *
+                    Rota / Setor *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: R111"
+                    value={formNovo.rotaSetor}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, rotaSetor: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Nota Fiscal (NF)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 252161"
+                    value={formNovo.notaFiscal}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, notaFiscal: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Mapa de Carga
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: M1055"
+                    value={formNovo.mapaCarga}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, mapaCarga: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Motorista
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Nome completo do motorista"
+                    value={formNovo.motorista}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, motorista: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Ajudante 1
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Nome do 1º ajudante"
+                    value={formNovo.ajudante1}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, ajudante1: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">
+                  Detalhamento SKUs / Produto *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: 9068 - SKOL LATA 350ML SH C/12 NPAL (2 CX)"
+                  value={formNovo.detalhamentoSkus}
+                  onChange={(e) => setFormNovo((p) => ({ ...p, detalhamentoSkus: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">
+                  Cliente (PDV)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: PONTO DE VENDA (PDV) BAR DO ZECA"
+                  value={formNovo.razaoSocialCliente}
+                  onChange={(e) => setFormNovo((p) => ({ ...p, razaoSocialCliente: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 uppercase"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Prejuízo (R$) *
                   </label>
                   <input
                     type="number"
+                    step="0.01"
                     required
+                    placeholder="57.04"
+                    value={formNovo.valorTotalPrejuizo}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, valorTotalPrejuizo: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Volume (HL)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.08"
+                    value={formNovo.volumeTotalHL}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, volumeTotalHL: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Qtd Itens/Cx
+                  </label>
+                  <input
+                    type="number"
                     placeholder="1"
-                    value={formNovo.qtde}
-                    onChange={(e) => setFormNovo((p) => ({ ...p, qtde: e.target.value }))}
+                    value={formNovo.qtdItens}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, qtdItens: e.target.value }))}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -1318,31 +2187,36 @@ export const ReposicaoView: React.FC = () => {
                     <option value="Litrão">Litrão</option>
                     <option value="Long Neck">Long Neck</option>
                     <option value="PET">PET</option>
+                    <option value="Chopp Barril">Chopp Barril</option>
                     <option value="Outros">Outros</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">
-                    Motivo da Reposição
+                    Status do Vale
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Avaria de Rota"
-                    value={formNovo.motivo}
-                    onChange={(e) => setFormNovo((p) => ({ ...p, motivo: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
-                  />
+                  <select
+                    value={formNovo.statusVale}
+                    onChange={(e) => setFormNovo((p) => ({ ...p, statusVale: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
+                  >
+                    <option value="Compensado">Compensado</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Em Aberto">Em Aberto</option>
+                    <option value="Faturado">Faturado</option>
+                    <option value="Descontado">Descontado</option>
+                  </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-400 font-semibold mb-1">
-                  Observações
+                  Observações / Motivo
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Informações adicionais da ocorrência..."
+                  placeholder="Informações adicionais do vale de reposição..."
                   value={formNovo.observacao}
                   onChange={(e) => setFormNovo((p) => ({ ...p, observacao: e.target.value }))}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 custom-scrollbar"
@@ -1361,7 +2235,7 @@ export const ReposicaoView: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  {editItem ? 'Salvar Alterações' : 'Criar Lançamento'}
+                  {editItem ? 'Salvar Alterações' : 'Criar Vale SSTR'}
                 </button>
               </div>
             </form>

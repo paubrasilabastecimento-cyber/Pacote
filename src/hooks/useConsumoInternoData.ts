@@ -25,6 +25,7 @@ import {
   mapJsonToConsumoInternoItems,
 } from '../data/mockConsumoInterno';
 import { classificarCategoriaProduto } from '../utils/consumoClassifier';
+import { parseDateToISO, formatDateBR } from '../utils/formatters';
 
 const LOCAL_STORAGE_KEY = 'ARMAZEM_FACIL_CONSUMO_INTERNO_CACHE';
 
@@ -76,24 +77,34 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
           const items: ConsumoInternoItem[] = [];
           snapshot.forEach((docSnap) => {
             const raw = docSnap.data();
-            const dt = raw.dataOperacao || raw.dtOperacao || new Date().toISOString().slice(0, 10);
+            const rawDataOp = raw.data_operacao || raw.dataOperacao || raw.dtOperacao || new Date().toISOString().slice(0, 10);
+            const rawDataEm = raw.data_emissao || raw.dataEmissao || raw.emissao || rawDataOp;
+            const dtISO = parseDateToISO(rawDataOp);
+            const emISO = parseDateToISO(rawDataEm);
+            const dtBR = formatDateBR(dtISO);
+            const emBR = formatDateBR(emISO);
+
             const totalVal = Number(raw.valor ?? raw.total ?? 0);
             const sku = Number(raw.produto ?? raw.produtoId ?? 0);
             const emb = raw.embalagem || 'LONG NECK';
+            const qtde = Number(raw.quantidade ?? raw.qtde ?? raw.qtd ?? 0);
 
             const item: ConsumoInternoItem = {
               id: docSnap.id,
               empresaId: raw.empresaId || companyId,
               operacao: Number(raw.operacao || 0),
-              dtOperacao: dt,
-              dataOperacao: dt,
-              emissao: raw.emissao || dt,
+              dtOperacao: dtISO,
+              dataOperacao: dtISO,
+              data_operacao: dtBR,
+              emissao: emISO,
+              data_emissao: emBR,
               status: raw.status || 'A',
               produtoId: sku,
               produto: sku,
-              unidade: raw.unidade || 'un',
+              unidade: raw.unidade || 'cx',
               descricao: raw.descricao || '',
-              qtde: Number(raw.qtde || 0),
+              qtde,
+              quantidade: qtde,
               total: totalVal,
               valor: totalVal,
               embalagem: emb,
@@ -147,25 +158,35 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
   // Actions: Add new consumo item
   const addConsumo = useCallback(
     async (input: ConsumoInternoInput) => {
-      const sku = Number(input.produto ?? input.produtoId);
-      const dt = input.dataOperacao || input.dtOperacao;
-      const totalVal = Number(input.valor ?? input.total);
+      const sku = Number(input.produto ?? input.produtoId ?? 0);
+      const rawDataOp = input.data_operacao || input.dataOperacao || input.dtOperacao || new Date().toISOString().slice(0, 10);
+      const rawDataEm = input.data_emissao || input.dataEmissao || input.emissao || rawDataOp;
+      const dtISO = parseDateToISO(rawDataOp);
+      const emISO = parseDateToISO(rawDataEm);
+      const dtBR = formatDateBR(dtISO);
+      const emBR = formatDateBR(emISO);
+
+      const totalVal = Number(input.valor ?? input.total ?? 0);
       const emb = input.embalagem || 'LONG NECK';
+      const qtde = Number(input.quantidade ?? input.qtde ?? 1);
       const categoria = input.categoria || classificarCategoriaProduto(input.descricao, sku);
 
       const newItem: ConsumoInternoItem = {
         id: `CI-${Date.now()}`,
         empresaId: companyId,
         operacao: Number(input.operacao),
-        dtOperacao: dt,
-        dataOperacao: dt,
-        emissao: input.emissao,
+        dtOperacao: dtISO,
+        dataOperacao: dtISO,
+        data_operacao: dtBR,
+        emissao: emISO,
+        data_emissao: emBR,
         status: input.status || 'A',
         produtoId: sku,
         produto: sku,
-        unidade: input.unidade || 'un',
+        unidade: input.unidade || 'cx',
         descricao: input.descricao,
-        qtde: Number(input.qtde),
+        qtde,
+        quantidade: qtde,
         total: totalVal,
         valor: totalVal,
         embalagem: emb,
@@ -188,17 +209,20 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
         const docRef = await addDoc(consumoCollectionRef, {
           empresaId: companyId,
           operacao: newItem.operacao,
+          data_operacao: dtBR,
           dataOperacao: newItem.dtOperacao,
           dtOperacao: newItem.dtOperacao,
+          data_emissao: emBR,
           emissao: newItem.emissao,
           status: newItem.status,
           produto: newItem.produtoId,
           produtoId: newItem.produtoId,
           unidade: newItem.unidade,
           descricao: newItem.descricao,
+          quantidade: newItem.quantidade,
           qtde: newItem.qtde,
           total: newItem.total,
-          valor: newItem.total,
+          valor: newItem.valor,
           embalagem: newItem.embalagem,
           categoria: newItem.categoria,
           solicitante: newItem.solicitante || '',
@@ -222,25 +246,36 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
   const importJsonData = useCallback(
     async (jsonItems: ConsumoInternoJSONItem[], overwrite: boolean = false) => {
       const formattedItems: ConsumoInternoItem[] = jsonItems.map((raw, idx) => {
-        const sku = Number(raw.produto || (raw as any).produtoId || 0);
-        const dt = raw.dataOperacao || (raw as any).dtOperacao || new Date().toISOString().slice(0, 10);
+        const sku = Number(raw.produto ?? (raw as any).produtoId ?? (raw as any).sku ?? 0);
+        const rawDataOp = raw.data_operacao || raw.dataOperacao || (raw as any).dtOperacao || (raw as any).data || '08/01/2026';
+        const rawDataEm = raw.data_emissao || (raw as any).dataEmissao || raw.emissao || rawDataOp;
+        const dtISO = parseDateToISO(rawDataOp);
+        const emISO = parseDateToISO(rawDataEm);
+        const dtBR = formatDateBR(dtISO);
+        const emBR = formatDateBR(emISO);
+
         const totalVal = Number(raw.valor ?? (raw as any).total ?? 0);
+        const qtde = Number(raw.quantidade ?? raw.qtde ?? (raw as any).qtd ?? 1);
         const emb = raw.embalagem || 'LONG NECK';
-        const categoria = classificarCategoriaProduto(raw.descricao, sku);
+        const desc = raw.descricao || 'PRODUTO CONSUMO INTERNO';
+        const categoria = classificarCategoriaProduto(desc, sku);
 
         return {
           id: `CI-JSON-${Date.now()}-${idx}`,
           empresaId: companyId,
-          operacao: Number(raw.operacao || 0),
-          dtOperacao: dt,
-          dataOperacao: dt,
-          emissao: raw.emissao || dt,
+          operacao: Number(raw.operacao || 100 + idx),
+          dtOperacao: dtISO,
+          dataOperacao: dtISO,
+          data_operacao: dtBR,
+          emissao: emISO,
+          data_emissao: emBR,
           status: raw.status || 'A',
           produtoId: sku,
           produto: sku,
-          unidade: raw.unidade || 'un',
-          descricao: raw.descricao || '',
-          qtde: Number(raw.qtde || 0),
+          unidade: raw.unidade || 'cx',
+          descricao: desc,
+          quantidade: qtde,
+          qtde,
           total: Number(totalVal.toFixed(2)),
           valor: Number(totalVal.toFixed(2)),
           embalagem: emb,
@@ -283,16 +318,19 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
           batch.set(newDocRef, {
             empresaId: companyId,
             operacao: item.operacao,
+            data_operacao: item.data_operacao,
             dataOperacao: item.dtOperacao,
             dtOperacao: item.dtOperacao,
+            data_emissao: item.data_emissao,
             emissao: item.emissao,
             status: item.status,
             produto: item.produtoId,
             produtoId: item.produtoId,
             unidade: item.unidade,
             descricao: item.descricao,
+            quantidade: item.quantidade,
             qtde: item.qtde,
-            valor: item.total,
+            valor: item.valor,
             total: item.total,
             embalagem: item.embalagem,
             categoria: item.categoria,
@@ -305,7 +343,7 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
 
         await batch.commit();
       } catch (err) {
-        console.warn('JSON salvo localmente no cache persistente:', err);
+        console.warn('Firestore Batch sync aviso (dados salvos localmente):', err);
       }
     },
     [companyId, saveToLocalCache]

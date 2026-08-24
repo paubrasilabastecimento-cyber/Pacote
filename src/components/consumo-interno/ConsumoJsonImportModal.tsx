@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { ConsumoInternoJSONItem } from '../../types/consumoInterno';
 import { classificarCategoriaProduto } from '../../utils/consumoClassifier';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, parseDateToISO, formatDateBR } from '../../utils/formatters';
 import {
   X,
   Upload,
@@ -13,6 +13,8 @@ import {
   Layers,
   ArrowRight,
   Sparkles,
+  ClipboardPaste,
+  FileCode,
 } from 'lucide-react';
 
 interface ConsumoJsonImportModalProps {
@@ -26,7 +28,9 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
   onClose,
   onImport,
 }) => {
+  const [activeTab, setActiveTab] = useState<'upload' | 'paste'>('upload');
   const [fileContent, setFileContent] = useState<string>('');
+  const [pastedText, setPastedText] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [parsedItems, setParsedItems] = useState<ConsumoInternoJSONItem[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -44,6 +48,10 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
     setIsSuccess(false);
 
     try {
+      if (!jsonString || !jsonString.trim()) {
+        throw new Error('Insira ou selecione um conteúdo JSON para importar.');
+      }
+
       const parsed = JSON.parse(jsonString);
       let list: any[] = [];
 
@@ -63,25 +71,36 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
 
       // Format to exact required schema
       const normalized: ConsumoInternoJSONItem[] = list.map((item, idx) => {
-        const sku = Number(item.produto ?? item.produtoId ?? 0);
-        const dt = item.dataOperacao || item.dtOperacao || new Date().toISOString().slice(0, 10);
-        const em = item.emissao || dt;
-        const totalVal = Number(item.valor ?? item.total ?? 0);
-        const op = Number(item.operacao || 100 + idx);
-        const desc = item.descricao || 'PRODUTO CONSUMO INTERNO';
+        const sku = Number(item.produto ?? item.produtoId ?? item.sku ?? 0);
+        const rawDataOp = item.data_operacao || item.dataOperacao || item.dtOperacao || item.data || '08/01/2026';
+        const rawDataEm = item.data_emissao || item.dataEmissao || item.emissao || rawDataOp;
+        
+        const dtISO = parseDateToISO(rawDataOp);
+        const emISO = parseDateToISO(rawDataEm);
+        const dataOpBR = formatDateBR(dtISO);
+        const dataEmBR = formatDateBR(emISO);
+
+        const totalVal = Number(item.valor ?? item.total ?? item.valor_total ?? 0);
+        const op = Number(item.operacao ?? item.op ?? 100 + idx);
+        const desc = item.descricao || item.produto_nome || item.nome || 'PRODUTO CONSUMO INTERNO';
         const un = item.unidade || 'cx';
-        const emb = item.embalagem || 'LONG NECK';
+        const emb = item.embalagem || item.tipo_embalagem || 'LONG NECK';
         const st = item.status || 'A';
-        const q = Number(item.qtde || 1);
+        const q = Number(item.quantidade ?? item.qtde ?? item.qtd ?? 1);
 
         return {
           operacao: op,
-          dataOperacao: dt,
-          emissao: em,
+          data_operacao: dataOpBR,
+          dataOperacao: dtISO,
+          dtOperacao: dtISO,
+          data_emissao: dataEmBR,
+          dataEmissao: emISO,
+          emissao: emISO,
           status: st,
           produto: sku,
           unidade: un,
           descricao: desc,
+          quantidade: q,
           qtde: q,
           valor: Number(totalVal.toFixed(2)),
           embalagem: emb,
@@ -136,6 +155,10 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
     }
   };
 
+  const handleProcessPastedText = () => {
+    parseAndValidateJson(pastedText, 'Texto Colado Manualmente');
+  };
+
   const handleImportSubmit = async () => {
     if (parsedItems.length === 0) return;
     setIsSubmitting(true);
@@ -149,6 +172,7 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
         setIsSuccess(false);
         setParsedItems([]);
         setFileContent('');
+        setPastedText('');
         setFileName('');
       }, 1200);
     } catch (err: any) {
@@ -162,27 +186,39 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
     const sample: ConsumoInternoJSONItem[] = [
       {
         operacao: 102,
-        dataOperacao: '2026-01-08',
-        emissao: '2026-01-08',
+        data_operacao: '08/01/2026',
+        data_emissao: '08/01/2026',
         status: 'A',
         produto: 18836,
         unidade: 'cx',
         descricao: 'CORONA EXTRA N LONG N',
-        qtde: 1,
+        quantidade: 1,
         valor: 118.01,
         embalagem: 'LONG NECK',
       },
       {
         operacao: 103,
-        dataOperacao: '2026-01-12',
-        emissao: '2026-01-12',
+        data_operacao: '12/01/2026',
+        data_emissao: '12/01/2026',
         status: 'A',
         produto: 21020,
         unidade: 'cx',
         descricao: 'BUDWEISER 350ML LATA',
-        qtde: 12,
+        quantidade: 12,
         valor: 680.4,
         embalagem: 'LATA',
+      },
+      {
+        operacao: 104,
+        data_operacao: '15/01/2026',
+        data_emissao: '15/01/2026',
+        status: 'A',
+        produto: 18450,
+        unidade: 'cx',
+        descricao: 'STELLA ARTOIS 330ML LN',
+        quantidade: 8,
+        valor: 733.44,
+        embalagem: 'LONG NECK',
       },
     ];
 
@@ -196,7 +232,7 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
   };
 
   const totalValor = parsedItems.reduce((acc, curr) => acc + (curr.valor || 0), 0);
-  const totalQtde = parsedItems.reduce((acc, curr) => acc + (curr.qtde || 0), 0);
+  const totalQtde = parsedItems.reduce((acc, curr) => acc + (curr.quantidade || curr.qtde || 0), 0);
 
   return (
     <div
@@ -212,13 +248,13 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Importar Arquivo JSON</span>
+                <span>Importar Consumo Interno (JSON)</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                  Consumo Interno
+                  Modelo Oficial
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Alimente a aba de consumo interno importando o arquivo JSON estruturado.
+                Importação no modelo: <code className="text-amber-300 font-mono text-[11px]">operacao, data_operacao, data_emissao, status, produto, unidade, descricao, quantidade, valor, embalagem</code>
               </p>
             </div>
           </div>
@@ -231,62 +267,141 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Dropzone */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
-              isDragging
-                ? 'border-amber-400 bg-amber-500/10 scale-[1.01]'
-                : parsedItems.length > 0
-                ? 'border-emerald-500/40 bg-emerald-500/5'
-                : 'border-slate-700 hover:border-slate-500 bg-slate-950/50 hover:bg-slate-950/80'
+        {/* Tabs: Upload File vs Paste Text */}
+        <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-800 bg-slate-950/40">
+          <button
+            type="button"
+            onClick={() => setActiveTab('upload')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+              activeTab === 'upload'
+                ? 'border-amber-400 text-amber-400 bg-amber-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+            <Upload className="w-3.5 h-3.5" />
+            <span>Carregar Arquivo .JSON</span>
+          </button>
 
-            <div className="flex flex-col items-center justify-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shadow-inner">
-                <Upload className="w-6 h-6" />
-              </div>
-              <div className="text-sm font-semibold text-white">
-                {fileName ? (
-                  <span className="text-emerald-400 flex items-center gap-1.5 justify-center">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Arquivo: {fileName}
-                  </span>
-                ) : (
-                  'Clique para selecionar ou arraste o arquivo .json aqui'
-                )}
-              </div>
-              <p className="text-xs text-slate-400 max-w-md">
-                Formato aceito: array JSON com <code className="text-amber-300 font-mono">operacao</code>, <code className="text-amber-300 font-mono">dataOperacao</code>, <code className="text-amber-300 font-mono">produto</code>, <code className="text-amber-300 font-mono">descricao</code>, <code className="text-amber-300 font-mono">qtde</code>, <code className="text-amber-300 font-mono">valor</code>, <code className="text-amber-300 font-mono">embalagem</code>.
-              </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab('paste')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+              activeTab === 'paste'
+                ? 'border-amber-400 text-amber-400 bg-amber-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <ClipboardPaste className="w-3.5 h-3.5" />
+            <span>Colar JSON Diretamente</span>
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
+          {/* JSON Model Schema Highlight Card */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <FileCode className="w-3.5 h-3.5 text-amber-400" />
+                Estrutura Padrão Aceita:
+              </span>
+              <button
+                type="button"
+                onClick={downloadSampleTemplate}
+                className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs underline font-medium cursor-pointer"
+              >
+                <Download className="w-3 h-3" />
+                Baixar Exemplo .json
+              </button>
             </div>
+            <pre className="text-[11px] font-mono text-emerald-400/90 bg-slate-900/90 p-2.5 rounded-lg overflow-x-auto border border-slate-800/80">
+{`[
+  {
+    "operacao": 102,
+    "data_operacao": "08/01/2026",
+    "data_emissao": "08/01/2026",
+    "status": "A",
+    "produto": 18836,
+    "unidade": "cx",
+    "descricao": "CORONA EXTRA N LONG N",
+    "quantidade": 1,
+    "valor": 118.01,
+    "embalagem": "LONG NECK"
+  }
+]`}
+            </pre>
           </div>
 
-          {/* Quick Sample Download & Paste Accordion */}
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-400">Deseja um arquivo de modelo?</span>
-            <button
-              type="button"
-              onClick={downloadSampleTemplate}
-              className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 underline font-medium cursor-pointer"
+          {/* TAB 1: UPLOAD FILE */}
+          {activeTab === 'upload' && (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                isDragging
+                  ? 'border-amber-400 bg-amber-500/10 scale-[1.01]'
+                  : parsedItems.length > 0
+                  ? 'border-emerald-500/40 bg-emerald-500/5'
+                  : 'border-slate-700 hover:border-slate-500 bg-slate-950/50 hover:bg-slate-950/80'
+              }`}
             >
-              <Download className="w-3.5 h-3.5" />
-              Baixar Modelo JSON (.json)
-            </button>
-          </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shadow-inner">
+                  <Upload className="w-6 h-6" />
+                </div>
+                <div className="text-sm font-semibold text-white">
+                  {fileName ? (
+                    <span className="text-emerald-400 flex items-center gap-1.5 justify-center">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Arquivo: {fileName}
+                    </span>
+                  ) : (
+                    'Clique para selecionar ou arraste o arquivo .json aqui'
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 max-w-md">
+                  Formato aceito: array JSON no modelo com <code className="text-amber-300 font-mono">data_operacao</code>, <code className="text-amber-300 font-mono">data_emissao</code>, <code className="text-amber-300 font-mono">quantidade</code> e <code className="text-amber-300 font-mono">embalagem</code>.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: PASTE RAW JSON */}
+          {activeTab === 'paste' && (
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-slate-300">
+                Cole o objeto ou array JSON abaixo:
+              </label>
+              <textarea
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                placeholder='[{"operacao": 102, "data_operacao": "08/01/2026", "data_emissao": "08/01/2026", "status": "A", "produto": 18836, "unidade": "cx", "descricao": "CORONA EXTRA N LONG N", "quantidade": 1, "valor": 118.01, "embalagem": "LONG NECK"}]'
+                rows={7}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-400 resize-y"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleProcessPastedText}
+                  disabled={!pastedText.trim()}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Processar e Validar JSON</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Parse Error Notification */}
           {parseError && (
@@ -343,7 +458,8 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
                   <thead className="bg-slate-950 sticky top-0 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="p-2">Op.</th>
-                      <th className="p-2">Data</th>
+                      <th className="p-2">Data Op.</th>
+                      <th className="p-2">Data Emis.</th>
                       <th className="p-2">SKU</th>
                       <th className="p-2">Descrição</th>
                       <th className="p-2">Embalagem</th>
@@ -355,13 +471,16 @@ export const ConsumoJsonImportModal: React.FC<ConsumoJsonImportModalProps> = ({
                     {parsedItems.slice(0, 15).map((it, idx) => (
                       <tr key={idx} className="hover:bg-slate-800/40">
                         <td className="p-2 text-amber-400">#{it.operacao}</td>
-                        <td className="p-2 text-slate-400">{it.dataOperacao}</td>
+                        <td className="p-2 text-slate-400">{it.data_operacao || it.dataOperacao}</td>
+                        <td className="p-2 text-slate-400">{it.data_emissao || it.emissao}</td>
                         <td className="p-2 text-slate-300">{it.produto}</td>
                         <td className="p-2 font-sans font-medium text-white truncate max-w-[180px]">
                           {it.descricao}
                         </td>
                         <td className="p-2 text-slate-400">{it.embalagem}</td>
-                        <td className="p-2 text-right">{it.qtde} {it.unidade}</td>
+                        <td className="p-2 text-right">
+                          {it.quantidade ?? it.qtde} {it.unidade}
+                        </td>
                         <td className="p-2 text-right text-emerald-400 font-bold">
                           {formatCurrency(it.valor)}
                         </td>

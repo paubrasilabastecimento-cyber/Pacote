@@ -20,11 +20,21 @@ import {
   ArrowRight,
   ShieldCheck,
   FolderUp,
+  Save,
+  Download,
+  HardDrive,
+  RefreshCw,
 } from 'lucide-react';
+import { PlatformSaveModal } from './PlatformSaveModal';
+import { downloadPlatformBackup, saveAllPlatformDataToServer } from '../utils/platformBackup';
 
 export const HistoricoView: React.FC = () => {
   const { importBatchPerdas, setActiveTab, importBatchTrocaPlanilha } = useApp();
   const { importJsonData: importConsumoJson } = useConsumoInternoData('empresa-01');
+
+  // Modal de Salvar Todos os Dados / Backup Geral
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState<boolean>(false);
+  const [isQuickSaving, setIsQuickSaving] = useState<boolean>(false);
 
   // Status de cada importador
   const [feedback, setFeedback] = useState<{
@@ -45,7 +55,31 @@ export const HistoricoView: React.FC = () => {
     setFeedback({ aba, tipo, mensagem });
     setTimeout(() => {
       setFeedback((prev) => (prev?.mensagem === mensagem ? null : prev));
-    }, 4500);
+    }, 5500);
+  };
+
+  const handleQuickDownloadBackup = async () => {
+    try {
+      setIsQuickSaving(true);
+      const res = await downloadPlatformBackup();
+      showFeedback('Backup Geral', 'sucesso', `Arquivo ${res.filename} exportado e baixado com sucesso (${res.totalRecords} registros)!`);
+    } catch (e: any) {
+      showFeedback('Backup Geral', 'erro', `Erro ao salvar backup: ${e?.message || 'Falha desconhecida'}`);
+    } finally {
+      setIsQuickSaving(false);
+    }
+  };
+
+  const handleQuickSaveServer = async () => {
+    try {
+      setIsQuickSaving(true);
+      const res = await saveAllPlatformDataToServer();
+      showFeedback('Gravar Plataforma', 'sucesso', res.message || 'Todos os dados foram gravados e persistidos no servidor!');
+    } catch (e: any) {
+      showFeedback('Gravar Plataforma', 'erro', `Erro ao salvar no servidor: ${e?.message || 'Falha'}`);
+    } finally {
+      setIsQuickSaving(false);
+    }
   };
 
   // 1. IMPORTAR ANÁLISE ANUAL DE QUEBRAS (JSON)
@@ -224,15 +258,27 @@ export const HistoricoView: React.FC = () => {
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Importação de Bases de Dados
+              Importação & Gestão de Dados
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 max-w-3xl mt-1">
-              Selecione o módulo operacional desejado abaixo para carregar arquivos JSON ou Planilhas (Excel/CSV). Os dados importados alimentarão instantaneamente os painéis correspondentes.
+              Importe arquivos JSON/Planilhas para cada módulo ou salve todos os dados cadastrados da plataforma em um único arquivo de backup.
             </p>
+          </div>
+
+          {/* Botão Principal: Salvar Todos os Dados */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsSaveModalOpen(true)}
+              className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer border border-emerald-400/30"
+            >
+              <HardDrive className="w-4 h-4" />
+              <span>Salvar Todos os Dados</span>
+            </button>
           </div>
         </div>
 
-        {/* Notificação / Feedback de Importação */}
+        {/* Notificação / Feedback de Importação / Salvamento */}
         {feedback && (
           <div
             className={`mt-4 p-3.5 rounded-xl border flex items-center gap-3 text-xs font-semibold animate-fadeIn ${
@@ -255,6 +301,75 @@ export const HistoricoView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* MASTER CARD: BACKUP GERAL & SALVAMENTO DA PLATAFORMA */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border-2 border-emerald-500/40 shadow-xl shadow-emerald-950/20 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/10">
+              <HardDrive className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  Backup Geral & Salvamento de Todos os Dados
+                </h3>
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                  Global
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                Gera um arquivo único consolidando <strong>Quebras Anuais</strong>, <strong>Reposição</strong>, <strong>Perdas por Mercadoria</strong>, <strong>Consumo Interno</strong>, <strong>Troca Prod. Impróprio</strong>, <strong>Planos 5W2H</strong> e <strong>Vales</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              disabled={isQuickSaving}
+              onClick={handleQuickDownloadBackup}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+            >
+              {isQuickSaving ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>Baixar Backup (.JSON)</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isQuickSaving}
+              onClick={handleQuickSaveServer}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            >
+              {isQuickSaving ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>Gravar no Servidor</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsSaveModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all cursor-pointer"
+            >
+              <Database className="w-4 h-4 text-emerald-400" />
+              <span>Painel de Backup</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Backup Geral */}
+      <PlatformSaveModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+      />
 
       {/* GRID DE CARDS DOS BOTÕES DE IMPORTAÇÃO POR ABA */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

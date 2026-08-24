@@ -525,6 +525,157 @@ async function startServer() {
     res.json({ success: true, message: 'Dados restaurados com sucesso!' });
   });
 
+  // Salvar Todos os Dados da Plataforma (Backup & Persistência Completa)
+  app.get('/api/backup', (_req, res) => {
+    const totalQuebras = (db.perdas || []).length;
+    const totalReposicao = (db.reposicaoItens || []).length;
+    const totalPerdasPor = (db.perdasPorItens || []).length;
+    const totalConsumoInterno = (db.consumoInternoItens || []).length;
+    const totalTrocasImproprio = (db.trocasImproprio || []).length;
+    const totalTrocaPlanilha = (db.trocaPlanilhaItens || []).length;
+    const totalPlanosAcao = (db.acoes || []).length;
+    const totalVales = (db.valesItens || []).length;
+    const totalKPIs = (db.kpis || []).length;
+    const totalComentarios = (db.comentarios || []).length;
+    const totalRegistrosGerais =
+      totalQuebras +
+      totalReposicao +
+      totalPerdasPor +
+      totalConsumoInterno +
+      totalTrocasImproprio +
+      totalTrocaPlanilha +
+      totalPlanosAcao +
+      totalVales +
+      totalKPIs +
+      totalComentarios;
+
+    res.json({
+      appName: 'Armazém Fácil - Pacote Prejuízo AMBEV',
+      version: '2026.1',
+      exportedAt: new Date().toISOString(),
+      summary: {
+        totalQuebras,
+        totalReposicao,
+        totalPerdasPor,
+        totalConsumoInterno,
+        totalTrocasImproprio,
+        totalTrocaPlanilha,
+        totalPlanosAcao,
+        totalVales,
+        totalKPIs,
+        totalComentarios,
+        totalRegistrosGerais,
+      },
+      data: {
+        perdas: db.perdas || [],
+        reposicaoItens: db.reposicaoItens || [],
+        perdasPorItens: db.perdasPorItens || [],
+        consumoInternoItens: db.consumoInternoItens || [],
+        trocasImproprio: db.trocasImproprio || [],
+        trocaPlanilhaItens: db.trocaPlanilhaItens || [],
+        nomeArquivoTroca: db.nomeArquivoTroca || null,
+        acoes: db.acoes || [],
+        kpis: db.kpis || [],
+        comentarios: db.comentarios || [],
+        valesItens: db.valesItens || [],
+      },
+    });
+  });
+
+  app.post('/api/backup/save-all', (req, res) => {
+    const payload = req.body || {};
+    const incomingData = payload.data || payload;
+
+    if (incomingData) {
+      if (Array.isArray(incomingData.perdas)) db.perdas = incomingData.perdas;
+      if (Array.isArray(incomingData.reposicaoItens)) db.reposicaoItens = incomingData.reposicaoItens;
+      if (Array.isArray(incomingData.perdasPorItens)) db.perdasPorItens = incomingData.perdasPorItens;
+      if (Array.isArray(incomingData.consumoInternoItens)) db.consumoInternoItens = incomingData.consumoInternoItens;
+      if (Array.isArray(incomingData.trocasImproprio)) db.trocasImproprio = incomingData.trocasImproprio;
+      if (Array.isArray(incomingData.trocaPlanilhaItens)) db.trocaPlanilhaItens = incomingData.trocaPlanilhaItens;
+      if (Array.isArray(incomingData.acoes)) db.acoes = incomingData.acoes;
+      if (Array.isArray(incomingData.kpis)) db.kpis = incomingData.kpis;
+      if (Array.isArray(incomingData.comentarios)) db.comentarios = incomingData.comentarios;
+      if (Array.isArray(incomingData.valesItens)) db.valesItens = incomingData.valesItens;
+      if (incomingData.nomeArquivoTroca !== undefined) db.nomeArquivoTroca = incomingData.nomeArquivoTroca;
+    }
+
+    saveData();
+
+    const totalQuebras = (db.perdas || []).length;
+    const totalReposicao = (db.reposicaoItens || []).length;
+    const totalPerdasPor = (db.perdasPorItens || []).length;
+    const totalConsumoInterno = (db.consumoInternoItens || []).length;
+    const totalTrocasImproprio = (db.trocasImproprio || []).length;
+    const totalTrocaPlanilha = (db.trocaPlanilhaItens || []).length;
+    const totalPlanosAcao = (db.acoes || []).length;
+    const totalVales = (db.valesItens || []).length;
+    const totalRegistrosGerais =
+      totalQuebras +
+      totalReposicao +
+      totalPerdasPor +
+      totalConsumoInterno +
+      totalTrocasImproprio +
+      totalTrocaPlanilha +
+      totalPlanosAcao +
+      totalVales;
+
+    res.json({
+      success: true,
+      message: 'Todos os dados da plataforma foram persistidos e salvos com sucesso no servidor!',
+      savedAt: new Date().toISOString(),
+      stats: {
+        totalQuebras,
+        totalReposicao,
+        totalPerdasPor,
+        totalConsumoInterno,
+        totalTrocasImproprio,
+        totalTrocaPlanilha,
+        totalPlanosAcao,
+        totalVales,
+        totalRegistrosGerais,
+      },
+    });
+  });
+
+  app.post('/api/backup/restore', (req, res) => {
+    const payload = req.body;
+    if (!payload) {
+      return res.status(400).json({ error: 'Conteúdo de backup inválido' });
+    }
+    const data = payload.data || payload;
+
+    if (Array.isArray(data.perdas)) db.perdas = data.perdas;
+    if (Array.isArray(data.reposicaoItens)) db.reposicaoItens = data.reposicaoItens;
+    if (Array.isArray(data.perdasPorItens)) db.perdasPorItens = data.perdasPorItens;
+    if (Array.isArray(data.consumoInternoItens)) db.consumoInternoItens = data.consumoInternoItens;
+    if (Array.isArray(data.trocasImproprio)) db.trocasImproprio = data.trocasImproprio;
+    if (Array.isArray(data.trocaPlanilhaItens)) db.trocaPlanilhaItens = data.trocaPlanilhaItens;
+    if (Array.isArray(data.acoes)) db.acoes = data.acoes;
+    if (Array.isArray(data.kpis)) db.kpis = data.kpis;
+    if (Array.isArray(data.comentarios)) db.comentarios = data.comentarios;
+    if (Array.isArray(data.valesItens)) db.valesItens = data.valesItens;
+    if (data.nomeArquivoTroca !== undefined) db.nomeArquivoTroca = data.nomeArquivoTroca;
+
+    saveData();
+
+    res.json({
+      success: true,
+      message: 'Backup completo da plataforma restaurado com sucesso!',
+      restoredAt: new Date().toISOString(),
+      stats: {
+        perdas: (db.perdas || []).length,
+        reposicao: (db.reposicaoItens || []).length,
+        perdasPor: (db.perdasPorItens || []).length,
+        consumoInterno: (db.consumoInternoItens || []).length,
+        trocas: (db.trocasImproprio || []).length,
+        trocaPlanilha: (db.trocaPlanilhaItens || []).length,
+        acoes: (db.acoes || []).length,
+        vales: (db.valesItens || []).length,
+      },
+    });
+  });
+
   // Vite Integration
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

@@ -8,8 +8,11 @@ import {
   Calendar,
   X,
   Search,
+  HardDrive,
+  Save,
 } from 'lucide-react';
 import { formatMesAno } from '../utils/formatters';
+import { PlatformSaveModal } from './PlatformSaveModal';
 
 interface TopBarProps {
   setIsMobileOpen: (open: boolean) => void;
@@ -39,6 +42,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   setIsFilterOpen,
 }) => {
   const { activeTab, setActiveTab, filtros, setFiltros, resetFiltros, availableMonths } = useApp();
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState<boolean>(false);
 
   // Calculate active filters count
   const activeFiltersCount = [
@@ -60,7 +64,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="flex items-center gap-3">
         <button
           onClick={() => setIsMobileOpen(true)}
-          className="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+          className="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
           title="Abrir Menu"
         >
           <Menu className="w-5 h-5" />
@@ -76,8 +80,18 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Right: Quick Month Selector, Filter Toggle & Action Button */}
+      {/* Right: Quick Month Selector, Save All Data & Filter Toggle */}
       <div className="flex items-center gap-2">
+        {/* Botão Salvar Todos os Dados */}
+        <button
+          onClick={() => setIsSaveModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 hover:border-emerald-400 transition-all cursor-pointer shadow-sm"
+          title="Salvar e Fazer Backup de Todos os Dados da Plataforma"
+        >
+          <HardDrive className="w-4 h-4 text-emerald-400" />
+          <span className="hidden sm:inline">Salvar Dados</span>
+        </button>
+
         {/* Quick Month Dropdown */}
         <div className="hidden md:flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/70 rounded-lg px-2.5 py-1.5 text-xs">
           <Calendar className="w-3.5 h-3.5 text-amber-400" />
@@ -100,7 +114,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Filter Button */}
         <button
           onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+          className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
             isFilterOpen || activeFiltersCount > 0
               ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'
               : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
@@ -115,6 +129,12 @@ export const TopBar: React.FC<TopBarProps> = ({
           )}
         </button>
       </div>
+
+      {/* Modal Global de Salvamento */}
+      <PlatformSaveModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+      />
     </header>
   );
 };

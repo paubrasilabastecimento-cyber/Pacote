@@ -19,7 +19,7 @@ import {
 
 export const ArvoreDecomposicaoView: React.FC = () => {
   const { setActiveTab, trocaPlanilhaItens } = useApp();
-  const itens: ItemPlanilha[] = trocaPlanilhaItens || DADOS_PLANILHA_DEMO;
+  const itens: ItemPlanilha[] = trocaPlanilhaItens || [];
 
   const analise = useMemo(() => {
     return analisarDadosPlanilha(itens);

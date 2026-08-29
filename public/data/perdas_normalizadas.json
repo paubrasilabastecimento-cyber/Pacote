@@ -16,7 +16,7 @@
     "unidade": "cx",
     "descricao": "BUDWEISER 350ML LATA",
     "qtde": 12,
-    "valor": 680.40,
+    "valor": 680.4,
     "embalagem": "LATA"
   },
   {
@@ -36,7 +36,7 @@
     "unidade": "cx",
     "descricao": "GUARANA ANTARCTICA 2L PET",
     "qtde": 25,
-    "valor": 720.00,
+    "valor": 720,
     "embalagem": "PET"
   },
   {
@@ -46,7 +46,7 @@
     "unidade": "cx",
     "descricao": "RED BULL ENERGY DRINK 250ML",
     "qtde": 15,
-    "valor": 1980.00,
+    "valor": 1980,
     "embalagem": "LATA"
   },
   {
@@ -56,7 +56,7 @@
     "unidade": "cx",
     "descricao": "AGUA MINERAL AMA S/ GAS 500ML",
     "qtde": 40,
-    "valor": 480.00,
+    "valor": 480,
     "embalagem": "PET"
   },
   {
@@ -66,7 +66,7 @@
     "unidade": "cx",
     "descricao": "AMENDOIM MENDORATO 500G",
     "qtde": 10,
-    "valor": 320.00,
+    "valor": 320,
     "embalagem": "PACOTE"
   },
   {
@@ -76,7 +76,7 @@
     "unidade": "cx",
     "descricao": "SPATEN MUNICH HELLES 355ML",
     "qtde": 14,
-    "valor": 1327.20,
+    "valor": 1327.2,
     "embalagem": "LONG NECK"
   },
   {
@@ -86,7 +86,7 @@
     "unidade": "cx",
     "descricao": "CORONA EXTRA N LONG N",
     "qtde": 20,
-    "valor": 2208.00,
+    "valor": 2208,
     "embalagem": "LONG NECK"
   },
   {
@@ -96,7 +96,7 @@
     "unidade": "cx",
     "descricao": "SKOL PILSEN 600ML RGB",
     "qtde": 30,
-    "valor": 2448.00,
+    "valor": 2448,
     "embalagem": "RGB"
   },
   {
@@ -106,7 +106,7 @@
     "unidade": "cx",
     "descricao": "PEPSI BLACK 350ML LATA",
     "qtde": 22,
-    "valor": 554.40,
+    "valor": 554.4,
     "embalagem": "LATA"
   },
   {
@@ -116,7 +116,7 @@
     "unidade": "cx",
     "descricao": "RED BULL ENERGY DRINK 250ML",
     "qtde": 18,
-    "valor": 2376.00,
+    "valor": 2376,
     "embalagem": "LATA"
   },
   {
@@ -126,7 +126,7 @@
     "unidade": "cx",
     "descricao": "AGUA MIN CRYSTAL C/ GAS 500ML",
     "qtde": 35,
-    "valor": 455.00,
+    "valor": 455,
     "embalagem": "PET"
   },
   {
@@ -136,7 +136,7 @@
     "unidade": "cx",
     "descricao": "MENDORATO PETISCO DIVERSOS",
     "qtde": 12,
-    "valor": 456.00,
+    "valor": 456,
     "embalagem": "PACOTE"
   },
   {
@@ -146,7 +146,7 @@
     "unidade": "cx",
     "descricao": "BRAHMA DUPLO MALTE 350ML",
     "qtde": 16,
-    "valor": 1094.40,
+    "valor": 1094.4,
     "embalagem": "LATA"
   },
   {
@@ -156,7 +156,7 @@
     "unidade": "cx",
     "descricao": "STELLA ARTOIS 330ML LN",
     "qtde": 15,
-    "valor": 1375.20,
+    "valor": 1375.2,
     "embalagem": "LONG NECK"
   },
   {
@@ -166,7 +166,7 @@
     "unidade": "cx",
     "descricao": "SPATEN MUNICH HELLES 355ML",
     "qtde": 18,
-    "valor": 1706.40,
+    "valor": 1706.4,
     "embalagem": "LONG NECK"
   },
   {
@@ -176,7 +176,7 @@
     "unidade": "cx",
     "descricao": "GUARANA ANTARCTICA 350ML LATA",
     "qtde": 28,
-    "valor": 705.60,
+    "valor": 705.6,
     "embalagem": "LATA"
   },
   {
@@ -186,7 +186,7 @@
     "unidade": "cx",
     "descricao": "SODA LIMONADA ANTARCTICA 350ML",
     "qtde": 20,
-    "valor": 504.00,
+    "valor": 504,
     "embalagem": "LATA"
   },
   {
@@ -196,7 +196,7 @@
     "unidade": "cx",
     "descricao": "H2OH CITRUS 500ML PET",
     "qtde": 25,
-    "valor": 750.00,
+    "valor": 750,
     "embalagem": "PET"
   },
   {
@@ -206,7 +206,7 @@
     "unidade": "cx",
     "descricao": "RED BULL SUGARFREE 250ML",
     "qtde": 12,
-    "valor": 1584.00,
+    "valor": 1584,
     "embalagem": "LATA"
   },
   {
@@ -216,7 +216,7 @@
     "unidade": "cx",
     "descricao": "AGUA MINERAL AMA S/ GAS 500ML",
     "qtde": 50,
-    "valor": 600.00,
+    "valor": 600,
     "embalagem": "PET"
   },
   {
@@ -226,7 +226,7 @@
     "unidade": "cx",
     "descricao": "CORONA EXTRA N LONG N",
     "qtde": 22,
-    "valor": 2428.80,
+    "valor": 2428.8,
     "embalagem": "LONG NECK"
   },
   {
@@ -236,7 +236,7 @@
     "unidade": "cx",
     "descricao": "BUDWEISER 330ML LN",
     "qtde": 16,
-    "valor": 1036.80,
+    "valor": 1036.8,
     "embalagem": "LONG NECK"
   },
   {
@@ -246,7 +246,7 @@
     "unidade": "cx",
     "descricao": "PEPSI BLACK 350ML LATA",
     "qtde": 30,
-    "valor": 756.00,
+    "valor": 756,
     "embalagem": "LATA"
   },
   {
@@ -256,7 +256,7 @@
     "unidade": "cx",
     "descricao": "RED BULL ENERGY DRINK 250ML",
     "qtde": 20,
-    "valor": 2640.00,
+    "valor": 2640,
     "embalagem": "LATA"
   },
   {
@@ -266,7 +266,7 @@
     "unidade": "cx",
     "descricao": "H2OH LIMONETO 500ML PET",
     "qtde": 22,
-    "valor": 660.00,
+    "valor": 660,
     "embalagem": "PET"
   },
   {
@@ -276,7 +276,7 @@
     "unidade": "cx",
     "descricao": "MENDORATO AMENDOIM JAPONES",
     "qtde": 15,
-    "valor": 480.00,
+    "valor": 480,
     "embalagem": "PACOTE"
   },
   {
@@ -286,7 +286,7 @@
     "unidade": "cx",
     "descricao": "SPATEN MUNICH HELLES 355ML",
     "qtde": 25,
-    "valor": 2370.00,
+    "valor": 2370,
     "embalagem": "LONG NECK"
   },
   {
@@ -306,7 +306,7 @@
     "unidade": "cx",
     "descricao": "GUARANA ANTARCTICA ZERO 350ML",
     "qtde": 26,
-    "valor": 655.20,
+    "valor": 655.2,
     "embalagem": "LATA"
   },
   {
@@ -316,7 +316,7 @@
     "unidade": "cx",
     "descricao": "RED BULL SUMMER EDITION 250ML",
     "qtde": 16,
-    "valor": 2112.00,
+    "valor": 2112,
     "embalagem": "LATA"
   },
   {
@@ -326,7 +326,7 @@
     "unidade": "cx",
     "descricao": "AGUA MINERAL AMA S/ GAS 500ML",
     "qtde": 45,
-    "valor": 540.00,
+    "valor": 540,
     "embalagem": "PET"
   },
   {
@@ -336,7 +336,7 @@
     "unidade": "cx",
     "descricao": "CORONA EXTRA N LONG N",
     "qtde": 28,
-    "valor": 3091.20,
+    "valor": 3091.2,
     "embalagem": "LONG NECK"
   },
   {
@@ -346,7 +346,7 @@
     "unidade": "cx",
     "descricao": "BUDWEISER 350ML LATA",
     "qtde": 20,
-    "valor": 1272.00,
+    "valor": 1272,
     "embalagem": "LATA"
   },
   {
@@ -356,7 +356,7 @@
     "unidade": "cx",
     "descricao": "SODA LIMONADA 2L PET",
     "qtde": 18,
-    "valor": 486.00,
+    "valor": 486,
     "embalagem": "PET"
   },
   {
@@ -366,7 +366,7 @@
     "unidade": "cx",
     "descricao": "RED BULL ENERGY DRINK 250ML",
     "qtde": 22,
-    "valor": 2904.00,
+    "valor": 2904,
     "embalagem": "LATA"
   },
   {
@@ -376,7 +376,7 @@
     "unidade": "cx",
     "descricao": "H2OH LIMONETO 500ML PET",
     "qtde": 30,
-    "valor": 900.00,
+    "valor": 900,
     "embalagem": "PET"
   },
   {
@@ -386,7 +386,7 @@
     "unidade": "cx",
     "descricao": "MENDORATO AMENDOIM TORRADO",
     "qtde": 14,
-    "valor": 448.00,
+    "valor": 448,
     "embalagem": "PACOTE"
   },
   {
@@ -396,7 +396,7 @@
     "unidade": "cx",
     "descricao": "SPATEN MUNICH HELLES 355ML",
     "qtde": 26,
-    "valor": 2464.80,
+    "valor": 2464.8,
     "embalagem": "LONG NECK"
   },
   {
@@ -406,7 +406,7 @@
     "unidade": "cx",
     "descricao": "SKOL PILSEN 350ML LATA",
     "qtde": 24,
-    "valor": 1468.80,
+    "valor": 1468.8,
     "embalagem": "LATA"
   },
   {
@@ -416,7 +416,7 @@
     "unidade": "cx",
     "descricao": "GUARANA ANTARCTICA 2L PET",
     "qtde": 32,
-    "valor": 921.60,
+    "valor": 921.6,
     "embalagem": "PET"
   },
   {
@@ -426,7 +426,7 @@
     "unidade": "cx",
     "descricao": "RED BULL ENERGY DRINK 250ML",
     "qtde": 24,
-    "valor": 3168.00,
+    "valor": 3168,
     "embalagem": "LATA"
   },
   {
@@ -436,7 +436,7 @@
     "unidade": "cx",
     "descricao": "AGUA MIN MINERAL AMA 500ML",
     "qtde": 50,
-    "valor": 600.00,
+    "valor": 600,
     "embalagem": "PET"
   },
   {
@@ -446,7 +446,7 @@
     "unidade": "cx",
     "descricao": "CORONA EXTRA N LONG N",
     "qtde": 18,
-    "valor": 1987.20,
+    "valor": 1987.2,
     "embalagem": "LONG NECK"
   },
   {
@@ -466,7 +466,7 @@
     "unidade": "cx",
     "descricao": "PEPSI BLACK 350ML LATA",
     "qtde": 20,
-    "valor": 504.00,
+    "valor": 504,
     "embalagem": "LATA"
   },
   {
@@ -476,7 +476,7 @@
     "unidade": "cx",
     "descricao": "RED BULL ENERGY DRINK 250ML",
     "qtde": 15,
-    "valor": 1980.00,
+    "valor": 1980,
     "embalagem": "LATA"
   },
   {
@@ -486,7 +486,7 @@
     "unidade": "cx",
     "descricao": "H2OH CITRUS 500ML PET",
     "qtde": 16,
-    "valor": 480.00,
+    "valor": 480,
     "embalagem": "PET"
   },
   {
@@ -496,7 +496,7 @@
     "unidade": "cx",
     "descricao": "MENDORATO AMENDOIM JAPONES",
     "qtde": 10,
-    "valor": 320.00,
+    "valor": 320,
     "embalagem": "PACOTE"
   }
 ]

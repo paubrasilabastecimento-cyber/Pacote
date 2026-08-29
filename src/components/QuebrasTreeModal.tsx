@@ -34,13 +34,13 @@ export const QuebrasTreeModal: React.FC<QuebrasTreeModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                <span>Árvore de Decomposição de Prejuízo por Motivo</span>
+                <span>Árvore de Decomposição Financeira do Prejuízo</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">
                   {perdas.length} quebras
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                Desdobramento hierárquico das avarias: Total (Raiz) → Motivo (Pareto) → Área Operacional → Produto / SKU
+                Desdobramento hierárquico: Total (Raiz) → Mês → Área / Armazém / Entrega / Puxada → Motivo → Produto / SKU
               </p>
             </div>
           </div>

@@ -7,6 +7,7 @@ import {
   Package,
   Maximize2,
   Minimize2,
+  ExternalLink,
   Layers,
   Sparkles,
 } from 'lucide-react';
@@ -463,6 +464,30 @@ export const ConsumoHierarchyTree: React.FC<ConsumoHierarchyTreeProps> = ({ data
               <span>Volume</span>
             </button>
           </div>
+
+          {/* Dedicated New Tab / Expand Buttons */}
+          <a
+            id="btn-open-consumo-tree-tab"
+            href="?view=arvore-consumo"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              try {
+                const targetUrl = `${window.location.origin}${window.location.pathname}?view=arvore-consumo`;
+                const newWin = window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                if (newWin) {
+                  e.preventDefault();
+                }
+              } catch {
+                // let default <a> behavior handle it
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all cursor-pointer shadow-md no-underline group"
+            title="Abrir a Árvore de Decomposição do Consumo Interno em uma nova guia exclusiva do navegador"
+          >
+            <ExternalLink className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            <span>Abrir em Outra Guia</span>
+          </a>
 
           {/* Fullscreen Button */}
           <button

@@ -35,12 +35,12 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
       const cached = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${companyId}`);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // ignore
     }
-    return DEMO_CONSUMO_INTERNO_LIST.filter((i) => i.empresaId === companyId || !i.empresaId);
+    return [];
   });
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -124,18 +124,9 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
           saveToLocalCache(items);
           setIsFirestoreConnected(true);
         } else {
-          // If Firestore is empty for this company, populate state with initial demo list if needed
-          setData((prev) => {
-            if (prev.length === 0) {
-              const demo = DEMO_CONSUMO_INTERNO_LIST.map((item) => ({
-                ...item,
-                empresaId: companyId,
-              }));
-              saveToLocalCache(demo);
-              return demo;
-            }
-            return prev;
-          });
+          // Empty state when Firestore collection is empty
+          setData([]);
+          saveToLocalCache([]);
         }
         setLoading(false);
       },
@@ -144,14 +135,32 @@ export function useConsumoInternoData(companyId: string = DEMO_EMPRESA_ID) {
         if (isMounted) {
           setIsFirestoreConnected(false);
           setLoading(false);
-          // Keep existing cached data
         }
       }
     );
 
+    const handleClear = () => {
+      setData([]);
+      saveToLocalCache([]);
+    };
+
+    const handleReset = () => {
+      const demo = DEMO_CONSUMO_INTERNO_LIST.map((item) => ({
+        ...item,
+        empresaId: companyId,
+      }));
+      setData(demo);
+      saveToLocalCache(demo);
+    };
+
+    window.addEventListener('ambev_platform_data_cleared', handleClear);
+    window.addEventListener('ambev_platform_data_reset', handleReset);
+
     return () => {
       isMounted = false;
       unsubscribe();
+      window.removeEventListener('ambev_platform_data_cleared', handleClear);
+      window.removeEventListener('ambev_platform_data_reset', handleReset);
     };
   }, [companyId, saveToLocalCache]);
 

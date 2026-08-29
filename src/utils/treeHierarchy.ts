@@ -27,8 +27,7 @@ export type HierarchyLevelType =
   | 'impacto';        // Card de Impacto Financeiro Consolidado
 
 /**
- * Classifica um registro seguindo a regra operacional:
- * "Tudo que for quebra com movimentação é armazem. o resto são as outras áreas."
+ * Classifica um registro preservando estritamente a área operacional real do registro (r.area).
  */
 export function classifyRecord(r: RegistroPerda): {
   areaPrincipal: string;
@@ -36,114 +35,52 @@ export function classifyRecord(r: RegistroPerda): {
 } {
   const motRaw = (r.motivo || '').toUpperCase().trim();
   const causaRaw = (r.causa || '').toUpperCase().trim();
-  const obsRaw = (r.observacao || '').toUpperCase().trim();
-  const codRaw = String(r.codQuebra || r.codigoMotivo || '').toUpperCase().trim();
+  const codRaw = String(r.codQuebra || r.codigoMotivo || '').replace(/^Q-?/i, '').toUpperCase().trim();
   const areaRaw = (r.area || '').toUpperCase().trim();
-  const respRaw = (r.responsavel || '').toUpperCase().trim();
 
-  // 1. REGRA PRINCIPAL: Tudo que for quebra com movimentação é ARMAZÉM
-  const isQuebraMovimentacao =
-    motRaw.includes('MOVIMENTAÇÃO') ||
-    motRaw.includes('MOVIMENTACAO') ||
-    motRaw.includes('MOVIME') ||
-    motRaw.includes('QUEBRA COM MOVIMENTAÇÃO') ||
-    motRaw.includes('QUEBRA COM MOVIMENTACAO') ||
-    causaRaw.includes('MOVIMENTAÇÃO') ||
-    causaRaw.includes('MOVIMENTACAO') ||
-    causaRaw.includes('MOVIME') ||
-    causaRaw.includes('MANUSEIO INTERNO') ||
-    causaRaw.includes('EMPILHADEIRA') ||
-    codRaw === '539' ||
-    codRaw === 'Q-539' ||
-    (motRaw.includes('QUEBRA') && !motRaw.includes('ROTA') && !motRaw.includes('ENTREGA') && !motRaw.includes('FALTA'));
-
-  if (isQuebraMovimentacao) {
-    return { areaPrincipal: 'ARMAZÉM', subArea: 'MOVIMENTAÇÃO' };
+  // 1. Respeita diretamente a área indicada no registro
+  if (areaRaw) {
+    if (areaRaw === 'PUXADA' || areaRaw.includes('PUXADA')) {
+      return { areaPrincipal: 'PUXADA' };
+    }
+    if (
+      areaRaw === 'ROTA' ||
+      areaRaw === 'ENTREGA' ||
+      areaRaw === 'ROTA / ENTREGA' ||
+      areaRaw.includes('ROTA') ||
+      areaRaw.includes('ENTREGA') ||
+      areaRaw.includes('DISTRIBUIÇÃO') ||
+      areaRaw.includes('DISTRIBUICAO')
+    ) {
+      return { areaPrincipal: 'ROTA / ENTREGA' };
+    }
+    if (areaRaw.includes('PATIO') || areaRaw.includes('PÁTIO')) {
+      return { areaPrincipal: 'PÁTIO' };
+    }
+    if (areaRaw.includes('ENVASE') || areaRaw.includes('LINHA') || areaRaw.includes('PRODUÇÃO') || areaRaw.includes('PRODUCAO')) {
+      return { areaPrincipal: 'ENVASE' };
+    }
+    if (areaRaw.includes('CARREGAMENTO') || areaRaw.includes('DESCARGA')) {
+      return { areaPrincipal: 'CARREGAMENTO' };
+    }
+    if (areaRaw.includes('RECEBIMENTO')) {
+      return { areaPrincipal: 'RECEBIMENTO' };
+    }
+    if (areaRaw === 'ARMAZEM' || areaRaw === 'ARMAZÉM' || areaRaw.includes('ARMAZ')) {
+      return { areaPrincipal: 'ARMAZÉM' };
+    }
+    return { areaPrincipal: r.area.toUpperCase() };
   }
 
-  // 2. FALTA NO PALETE (Inconsistência de Palete / Recebimento / Fábrica)
-  const isFaltaPalete =
-    motRaw.includes('FALTA NO PALETE') ||
-    motRaw.includes('FALTA PALETE') ||
-    causaRaw.includes('FALTA NO PALETE') ||
-    codRaw === '524' ||
-    codRaw === 'Q-524' ||
-    codRaw === '576' ||
-    codRaw === 'Q-576' ||
-    (motRaw.includes('FALTA') && motRaw.includes('PALETE'));
-
-  if (isFaltaPalete) {
-    return { areaPrincipal: 'FALTA NO PALETE' };
+  // 2. Fallback caso a área esteja vazia no registro
+  if (['574', '574.4', '575', '576', '577', '578', '584', '585'].includes(codRaw)) {
+    return { areaPrincipal: 'PUXADA' };
   }
-
-  // 3. ROTA / ENTREGA
-  const isEntrega =
-    areaRaw.includes('ENTREGA') ||
-    areaRaw.includes('ROTA') ||
-    areaRaw.includes('DISTRIBUIÇÃO') ||
-    areaRaw.includes('DISTRIBUICAO') ||
-    motRaw.includes('ROTA') ||
-    motRaw.includes('ENTREGA') ||
-    obsRaw.includes('ENTREGA') ||
-    obsRaw.includes('ROTA') ||
-    obsRaw.includes('MOTORISTA') ||
-    respRaw.includes('MOTORISTA') ||
-    respRaw.includes('ROTA');
-
-  if (isEntrega) {
+  if (['545', '547', '548', '554', '557'].includes(codRaw)) {
     return { areaPrincipal: 'ROTA / ENTREGA' };
   }
-
-  // 4. QUALIDADE / SHELF (WQI)
-  const isQualidade =
-    motRaw.includes('SHELF') ||
-    motRaw.includes('VALIDADE') ||
-    motRaw.includes('VENCIMENTO') ||
-    motRaw.includes('ESTUFADO') ||
-    motRaw.includes('VAZAMENTO') ||
-    motRaw.includes('DESVIO') ||
-    motRaw.includes('REFUGO') ||
-    motRaw.includes('QUALIDADE') ||
-    causaRaw.includes('SHELF') ||
-    causaRaw.includes('FEFO') ||
-    causaRaw.includes('VENCIMENTO');
-
-  if (isQualidade) {
-    return { areaPrincipal: 'QUALIDADE / WQI' };
-  }
-
-  // 5. CARREGAMENTO / PÁTIO
-  const isPatioCarregamento =
-    areaRaw.includes('CARREGAMENTO') ||
-    areaRaw.includes('DESCARGA') ||
-    areaRaw.includes('PÁTIO') ||
-    areaRaw.includes('PATIO') ||
-    motRaw.includes('CARREGAMENTO') ||
-    motRaw.includes('DESCARGA');
-
-  if (isPatioCarregamento) {
-    return { areaPrincipal: 'CARREGAMENTO / PÁTIO' };
-  }
-
-  // 6. ENVASE / LINHA
-  const isEnvase =
-    areaRaw.includes('ENVASE') ||
-    areaRaw.includes('LINHA') ||
-    areaRaw.includes('PRODUÇÃO') ||
-    areaRaw.includes('PRODUCAO');
-
-  if (isEnvase) {
-    return { areaPrincipal: 'ENVASE' };
-  }
-
-  // 7. RECEBIMENTO
-  if (areaRaw.includes('RECEBIMENTO')) {
-    return { areaPrincipal: 'RECEBIMENTO' };
-  }
-
-  // 8. O RESTO SÃO AS OUTRAS ÁREAS
-  if (areaRaw && areaRaw !== 'ARMAZEM' && areaRaw !== 'ARMAZÉM') {
-    return { areaPrincipal: areaRaw };
+  if (['521', '522', '524', '525', '537', '539', '589'].includes(codRaw)) {
+    return { areaPrincipal: 'ARMAZÉM' };
   }
 
   return { areaPrincipal: 'OUTRAS ÁREAS' };

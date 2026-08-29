@@ -40,8 +40,23 @@ export const PRODUTOS_AMBEV: ProdutoSKU[] = [
 export const AREAS: Area[] = ['Armazém', 'Rota / Entrega', 'Envase', 'Pátio', 'Recebimento', 'Carregamento'];
 export const TURNOS: Turno[] = ['1º Turno', '2º Turno', '3º Turno', 'ADM'];
 
-export const META_ORCADA_ANUAL_2026 = 55149.116;
-export const META_ORCADA_MENSAL_PADRAO = 4595.76;
+export const META_ORCADA_ANUAL_2026 = 50135.57;
+export const META_ORCADA_MENSAL_PADRAO = 4177.96;
+
+export const MONTHLY_METAS_MAP_2026: Record<string, number> = {
+  '2026-01': 4067.54,
+  '2026-02': 7148.48,
+  '2026-03': 4474.72,
+  '2026-04': 3692.83,
+  '2026-05': 2816.18,
+  '2026-06': 4464.79,
+  '2026-07': 5123.33,
+  '2026-08': 1316.14,
+  '2026-09': 2401.16,
+  '2026-10': 5126.55,
+  '2026-11': 3563.72,
+  '2026-12': 5940.13,
+};
 
 export const HISTORICO_KPIS: KPIStats[] = [
   {

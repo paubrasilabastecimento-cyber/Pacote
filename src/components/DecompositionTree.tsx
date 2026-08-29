@@ -589,7 +589,7 @@ export const DecompositionTree: React.FC<DecompositionTreeProps> = ({ itens }) =
                   Total Geral
                 </span>
                 <h4 className="text-xs sm:text-sm font-black text-white leading-tight mt-0.5">
-                  Troca Prod. Impróprio
+                  Trocas de Produtos Impróprios
                 </h4>
                 <div className="text-xs font-mono font-bold text-sky-400 mt-1">
                   100.0% do Total

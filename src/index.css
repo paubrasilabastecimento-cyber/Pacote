@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Gradiente corporativo Pau Brasil / Ambev - Azul celestial com curvas de onda e brilho suave */
+.bg-pau-brasil-mesh {
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.45) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(37, 99, 235, 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(29, 78, 216, 0.6) 0%, transparent 60%),
+    linear-gradient(135deg, #bfdbfe 0%, #93c5fd 25%, #60a5fa 55%, #3b82f6 80%, #1d4ed8 100%);
+  background-attachment: fixed;
+}
+
+/* Efeito de onda decorativa suave no fundo */
+.bg-wave-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 /* Ocultar barras de rolagem nativas feias mantendo a rolagem fluida */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -24,3 +40,4 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.4);
 }
+

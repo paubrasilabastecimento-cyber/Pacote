@@ -34,6 +34,8 @@ import {
   Sparkles,
   Network,
   FolderTree,
+  Droplet,
+  Package,
 } from 'lucide-react';
 import { QuebrasTreeModal } from './QuebrasTreeModal';
 import { QuebrasHierarchyTree } from './QuebrasHierarchyTree';
@@ -62,6 +64,22 @@ export const DashboardView: React.FC = () => {
     filtros,
     importBatchPerdas,
   } = useApp();
+
+  // Metric Filter: 'valor' (R$ - Real) or 'hl' (HL - Hectolitro)
+  const [unitMetric, setUnitMetric] = useState<'valor' | 'hl'>(() => {
+    try {
+      const saved = localStorage.getItem('AMBEV_PERDAS_PA_METRIC');
+      if (saved === 'hl' || saved === 'valor') return saved;
+    } catch {}
+    return 'valor';
+  });
+
+  const handleSelectMetric = (m: 'valor' | 'hl') => {
+    setUnitMetric(m);
+    try {
+      localStorage.setItem('AMBEV_PERDAS_PA_METRIC', m);
+    } catch {}
+  };
 
   // JSON Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
@@ -180,7 +198,7 @@ export const DashboardView: React.FC = () => {
     }, 1500);
   };
 
-  // Exact Meta by month
+  // Exact Meta by month (Financial R$)
   const MONTHLY_METAS_MAP: Record<string, number> = {
     '2026-01': 4067.54,
     '2026-02': 7148.48,
@@ -194,6 +212,31 @@ export const DashboardView: React.FC = () => {
     '2026-10': 5126.55,
     '2026-11': 3563.72,
     '2026-12': 5940.13,
+  };
+
+  // Exact Meta by month (Volumetric HL - Hectolitros)
+  const MONTHLY_METAS_HL_MAP: Record<string, number> = {
+    '2026-01': 8.50,
+    '2026-02': 8.50,
+    '2026-03': 8.50,
+    '2026-04': 8.50,
+    '2026-05': 8.00,
+    '2026-06': 8.00,
+    '2026-07': 8.00,
+    '2026-08': 7.50,
+    '2026-09': 7.50,
+    '2026-10': 8.00,
+    '2026-11': 8.00,
+    '2026-12': 8.50,
+  };
+
+  // Helper formatter for dynamic metric display
+  const formatMetric = (val: number | null | undefined): string => {
+    if (val === null || val === undefined) return 'Pendente';
+    if (unitMetric === 'valor') {
+      return formatCurrency(val);
+    }
+    return formatHL(val);
   };
 
   // Custom High-End Tooltip for Meta x Real 2026 Chart
@@ -239,19 +282,19 @@ export const DashboardView: React.FC = () => {
           <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-800">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-slate-300 font-medium">Meta 2026:</span>
+              <span className="text-slate-300 font-medium">Meta 2026 ({unitMetric === 'valor' ? 'R$' : 'HL'}):</span>
             </div>
-            <span className="font-mono font-bold text-amber-400">{formatCurrency(metaVal)}</span>
+            <span className="font-mono font-bold text-amber-400">{formatMetric(metaVal)}</span>
           </div>
 
           {/* Realizado */}
           <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-800">
             <div className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${isPendente ? 'bg-slate-500' : isDentro ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-              <span className="text-slate-300 font-medium">Real 2026:</span>
+              <span className="text-slate-300 font-medium">Real 2026 ({unitMetric === 'valor' ? 'R$' : 'HL'}):</span>
             </div>
             <span className={`font-mono font-bold ${isPendente ? 'text-slate-400 italic' : isDentro ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {isPendente ? 'Ainda não temos' : formatCurrency(realVal)}
+              {isPendente ? 'Ainda não temos' : formatMetric(realVal)}
             </span>
           </div>
 
@@ -262,7 +305,7 @@ export const DashboardView: React.FC = () => {
                 {isDentro ? 'Economia no Mês:' : 'Desvio no Mês:'}
               </span>
               <span className={`font-mono font-bold ${isDentro ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {gap <= 0 ? '-' : '+'}{formatCurrency(Math.abs(gap))} ({atingimentoPct.toFixed(1)}%)
+                {gap <= 0 ? '-' : '+'}{formatMetric(Math.abs(gap))} ({atingimentoPct.toFixed(1)}%)
               </span>
             </div>
           )}
@@ -310,19 +353,19 @@ export const DashboardView: React.FC = () => {
           {!isPendente && gap !== null ? (
             <>
               <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-800">
-                <span className="text-slate-300 font-medium">Variação Real vs Meta:</span>
+                <span className="text-slate-300 font-medium">Variação Real vs Meta ({unitMetric === 'valor' ? 'R$' : 'HL'}):</span>
                 <span className={`font-mono text-sm font-black ${isEconomia ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {gap <= 0 ? '-' : '+'}{formatCurrency(Math.abs(gap))}
+                  {gap <= 0 ? '-' : '+'}{formatMetric(Math.abs(gap))}
                 </span>
               </div>
               <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/80 space-y-1 text-[11px]">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Meta Orçada:</span>
-                  <span className="font-mono text-amber-400 font-bold">{formatCurrency(metaVal)}</span>
+                  <span className="text-slate-400">Meta:</span>
+                  <span className="font-mono text-amber-400 font-bold">{formatMetric(metaVal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Real Apurado:</span>
-                  <span className={`font-mono font-bold ${isEconomia ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(realVal)}</span>
+                  <span className={`font-mono font-bold ${isEconomia ? 'text-emerald-400' : 'text-rose-400'}`}>{formatMetric(realVal)}</span>
                 </div>
               </div>
             </>
@@ -365,8 +408,8 @@ export const DashboardView: React.FC = () => {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-800">
-            <span className="text-slate-300 font-medium">Prejuízo Financeiro:</span>
-            <span className="font-mono font-black text-rose-400 text-sm">{formatCurrency(valor)}</span>
+            <span className="text-slate-300 font-medium">Perda ({unitMetric === 'valor' ? 'R$' : 'HL'}):</span>
+            <span className="font-mono font-black text-rose-400 text-sm">{formatMetric(valor)}</span>
           </div>
 
           <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-800">
@@ -396,9 +439,19 @@ export const DashboardView: React.FC = () => {
       const baseKPI = kpis.find((k) => k.mes === mes);
       const perdasDoMes = filteredPerdas.filter((p) => p.mesRef === mes);
       const hasReal = perdasDoMes.length > 0;
-      const sclAtual = hasReal ? Number(perdasDoMes.reduce((acc, p) => acc + p.valorR$, 0).toFixed(2)) : null;
-      const sclMeta = MONTHLY_METAS_MAP[mes] ?? (baseKPI?.sclMeta || 4595.76);
-      const sclAnterior = baseKPI?.sclAnterior ?? (sclAtual !== null ? Number((sclAtual * 0.95).toFixed(2)) : 0);
+
+      const realValor = hasReal ? Number(perdasDoMes.reduce((acc, p) => acc + (p.valorR$ || 0), 0).toFixed(2)) : null;
+      const realHL = hasReal ? Number(perdasDoMes.reduce((acc, p) => acc + (p.hlPerdido || 0), 0).toFixed(4)) : null;
+
+      const sclMetaValor = MONTHLY_METAS_MAP[mes] ?? baseKPI?.sclMeta ?? 4177.96;
+      const sclMetaHL = MONTHLY_METAS_HL_MAP[mes] ?? baseKPI?.fgliMeta ?? 8.50;
+
+      const sclAtual = unitMetric === 'valor' ? realValor : realHL;
+      const sclMeta = unitMetric === 'valor' ? sclMetaValor : sclMetaHL;
+
+      const baseAnteriorValor = baseKPI?.sclAnterior ?? (realValor !== null ? Number((realValor * 0.95).toFixed(2)) : 0);
+      const baseAnteriorHL = baseKPI?.fgliAnterior ?? (realHL !== null ? Number((realHL * 0.95).toFixed(4)) : 0);
+      const sclAnterior = unitMetric === 'valor' ? baseAnteriorValor : baseAnteriorHL;
 
       return {
         id: baseKPI?.id || `kpi-${mes}`,
@@ -406,6 +459,10 @@ export const DashboardView: React.FC = () => {
         sclAtual, // null if future/no records yet
         sclMeta,
         sclAnterior,
+        realValor,
+        realHL,
+        metaValor: sclMetaValor,
+        metaHL: sclMetaHL,
         count: perdasDoMes.length,
         hasReal,
       };
@@ -418,7 +475,7 @@ export const DashboardView: React.FC = () => {
       return full12Months.slice(-6);
     }
     return full12Months; // 'anual' => all 12 months of 2026
-  }, [kpis, filteredPerdas, timeHorizon]);
+  }, [kpis, filteredPerdas, timeHorizon, unitMetric]);
 
   // Annual / Period Consolidated Totals for Summary
   const periodTotals = useMemo(() => {
@@ -439,20 +496,24 @@ export const DashboardView: React.FC = () => {
     };
   }, [chartMonthKPIs]);
 
-  // Calculate Pareto data from filtered perdas (100% Financial R$)
+  // Calculate Pareto data from filtered perdas based on selected metric (R$ or HL)
   const motiveLossMap: Record<string, number> = {};
   filteredPerdas.forEach((p) => {
     const mot = (p.motivo || 'OUTROS').trim().toUpperCase();
-    motiveLossMap[mot] = (motiveLossMap[mot] || 0) + p.valorR$;
+    const itemVal = unitMetric === 'valor' ? (p.valorR$ || 0) : (p.hlPerdido || 0);
+    motiveLossMap[mot] = (motiveLossMap[mot] || 0) + itemVal;
   });
 
-  const totalFilteredValor = filteredPerdas.reduce((acc, p) => acc + p.valorR$, 0);
+  const totalFilteredMetric = filteredPerdas.reduce(
+    (acc, p) => acc + (unitMetric === 'valor' ? (p.valorR$ || 0) : (p.hlPerdido || 0)),
+    0
+  );
 
   const rawParetoSorted = Object.entries(motiveLossMap)
     .map(([motivo, valor]) => ({
       motivo,
       valor,
-      percent: totalFilteredValor > 0 ? (valor / totalFilteredValor) * 100 : 0,
+      percent: totalFilteredMetric > 0 ? (valor / totalFilteredMetric) * 100 : 0,
     }))
     .sort((a, b) => b.valor - a.valor);
 
@@ -496,86 +557,157 @@ export const DashboardView: React.FC = () => {
     };
   });
 
-  // Gap for current month
-  const currentMonthGap = currentMonthKPI.sclAtual - currentMonthKPI.sclMeta;
-  const currentMonthAtingimento = currentMonthKPI.sclMeta > 0 ? (currentMonthKPI.sclAtual / currentMonthKPI.sclMeta) * 100 : 0;
+  // Dynamic values for current month card based on selected metric (R$ or HL)
+  const currentMonthRealVal = useMemo(() => {
+    if (unitMetric === 'valor') {
+      return currentMonthKPI.sclAtual;
+    }
+    const perdasMes = filteredPerdas.filter((p) => p.mesRef === currentMonthKPI.mes);
+    if (perdasMes.length > 0) {
+      return perdasMes.reduce((acc, p) => acc + (p.hlPerdido || 0), 0);
+    }
+    return currentMonthKPI.fgliAtual || 0;
+  }, [unitMetric, currentMonthKPI, filteredPerdas]);
+
+  const currentMonthMetaVal = useMemo(() => {
+    if (unitMetric === 'valor') {
+      return currentMonthKPI.sclMeta;
+    }
+    return MONTHLY_METAS_HL_MAP[currentMonthKPI.mes] ?? currentMonthKPI.fgliMeta ?? 8.50;
+  }, [unitMetric, currentMonthKPI]);
+
+  const currentMonthAnteriorVal = useMemo(() => {
+    if (unitMetric === 'valor') {
+      return currentMonthKPI.sclAnterior;
+    }
+    return currentMonthKPI.fgliAnterior || 0;
+  }, [unitMetric, currentMonthKPI]);
+
+  // Gap and Atingimento for current month
+  const currentMonthGap = currentMonthRealVal - currentMonthMetaVal;
+  const currentMonthAtingimento = currentMonthMetaVal > 0 ? (currentMonthRealVal / currentMonthMetaVal) * 100 : 0;
 
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner Info */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-        <div className="space-y-1">
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 border border-blue-700/50 rounded-2xl p-5 shadow-lg shadow-blue-950/20 text-white flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="space-y-1 relative z-10">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-amber-500 text-slate-950 font-bold text-xs uppercase px-2.5 py-0.5 rounded-md tracking-wider">
-              Gestão Financeira AMBEV 2026
+            <span className="bg-white/20 backdrop-blur-md text-white font-black text-xs uppercase px-2.5 py-0.5 rounded-lg tracking-wider border border-white/20">
+              Gestão Operacional Ambev 2026
             </span>
-            <span className="text-xs text-slate-400 font-medium">
-              Mês Referência: <strong className="text-amber-400">{formatMesAno(currentMonthKPI.mes)}</strong>
+            <span className="text-xs text-blue-100 font-medium">
+              Mês Referência: <strong className="text-amber-300">{formatMesAno(currentMonthKPI.mes)}</strong>
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Painel Executivo do Pacote Prejuízo (SCL R$)
+          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5 flex-wrap">
+            <span>
+              {unitMetric === 'valor'
+                ? 'Painel Executivo de Perdas PA (SCL R$)'
+                : 'Painel Executivo de Perdas PA (SCL HL)'}
+            </span>
+            <span className={`text-xs px-2.5 py-0.5 rounded-lg font-extrabold uppercase border ${unitMetric === 'valor' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/40' : 'bg-sky-500/30 text-sky-200 border-sky-400/40'}`}>
+              {unitMetric === 'valor' ? 'Visão em R$ (Real)' : 'Visão em HL (Hectolitro)'}
+            </span>
           </h2>
-          <p className="text-xs text-slate-400 max-w-2xl">
-            Monitoramento 100% financeiro do orçamento de perdas operacionais, comparativo Meta vs Real 2026 e eficiência de custos.
+          <p className="text-xs text-blue-100/90 max-w-2xl">
+            {unitMetric === 'valor'
+              ? 'Monitoramento financeiro do orçamento de perdas operacionais, comparativo Meta vs Real 2026 e eficiência de custos.'
+              : 'Monitoramento volumétrico (Hectolitros - HL) de perdas operacionais, comparativo Meta vs Real 2026 e eficiência física.'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-start xl:justify-end">
-          <div className="flex items-center gap-4 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-start xl:justify-end relative z-10">
+          {/* R$ vs HL Metric Switcher */}
+          <div className="flex items-center bg-blue-950/60 backdrop-blur-md p-1 rounded-xl border border-blue-700/60 shadow-inner">
+            <button
+              id="btn-filter-metric-rs"
+              onClick={() => handleSelectMetric('valor')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                unitMetric === 'valor'
+                  ? 'bg-emerald-400 text-blue-950 shadow-md font-black'
+                  : 'text-blue-200 hover:text-white hover:bg-white/10'
+              }`}
+              title="Filtrar visão em Reais (R$)"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>R$ (Real)</span>
+            </button>
+            <button
+              id="btn-filter-metric-hl"
+              onClick={() => handleSelectMetric('hl')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                unitMetric === 'hl'
+                  ? 'bg-sky-400 text-blue-950 shadow-md font-black'
+                  : 'text-blue-200 hover:text-white hover:bg-white/10'
+              }`}
+              title="Filtrar visão em Hectolitros (HL)"
+            >
+              <Droplet className="w-3.5 h-3.5" />
+              <span>HL (Hectolitro)</span>
+            </button>
+          </div>
+
+          {/* Real vs Meta Accumulated Card */}
+          <div className="flex items-center gap-4 bg-blue-950/70 backdrop-blur-md p-3 rounded-xl border border-blue-700/60">
             <div className="text-right">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
-                Prejuízo Real Acumulado
+              <div className="text-[10px] text-blue-200 uppercase tracking-wider font-bold">
+                {unitMetric === 'valor' ? 'Prejuízo Real' : 'Volume Real'}
               </div>
-              <div className="text-xl font-extrabold text-emerald-400 font-mono">
-                {formatCurrency(periodTotals.totalSCLReal)}
+              <div className="text-lg sm:text-xl font-extrabold text-emerald-300 font-mono">
+                {formatMetric(periodTotals.totalSCLReal)}
               </div>
             </div>
-            <div className="h-8 w-px bg-slate-800" />
+            <div className="h-8 w-px bg-blue-700/80" />
             <div className="text-left">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
-                Meta Orçada Acumulada
+              <div className="text-[10px] text-blue-200 uppercase tracking-wider font-bold">
+                {unitMetric === 'valor' ? 'Meta Orçada' : 'Meta HL'}
               </div>
-              <div className="text-xl font-extrabold text-amber-400 font-mono">
-                {formatCurrency(periodTotals.totalSCLMeta)}
+              <div className="text-lg sm:text-xl font-extrabold text-amber-300 font-mono">
+                {formatMetric(periodTotals.totalSCLMeta)}
               </div>
             </div>
           </div>
 
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-4 py-3 rounded-xl text-xs transition-all shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer whitespace-nowrap"
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-blue-950 font-black px-4 py-3 rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer whitespace-nowrap"
             title="Importar arquivo JSON de quebras para alimentar toda a análise anual"
           >
-            <Upload className="w-4 h-4 text-slate-950" />
+            <Upload className="w-4 h-4 text-blue-950" />
             <span>Importar JSON de Quebras</span>
           </button>
         </div>
       </div>
 
-      {/* 4 MAIN FINANCIAL SUMMARY CARDS */}
+      {/* 4 MAIN SUMMARY CARDS (R$ or HL) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Prejuízo Real Mês Atual */}
+        {/* Card 1: Real Mês Atual */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-4 transition-all duration-200 shadow-md hover:shadow-xl cursor-pointer relative overflow-hidden"
+          className="group bg-white border border-blue-200 hover:border-emerald-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
         >
           <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-              Real 2026 ({formatMesCurto(currentMonthKPI.mes)})
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+              Real 2026 ({formatMesCurto(currentMonthKPI.mes)}) • {unitMetric === 'valor' ? 'R$' : 'HL'}
             </span>
-            <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-emerald-500/10 transition-colors">
-              <DollarSign className="w-4 h-4 text-emerald-400" />
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+              {unitMetric === 'valor' ? (
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <Droplet className="w-4 h-4 text-emerald-600" />
+              )}
             </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono">
-            {formatCurrency(currentMonthKPI.sclAtual)}
+          <div className="text-2xl font-black text-blue-950 font-mono">
+            {formatMetric(currentMonthRealVal)}
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
-            <span>Meta: <strong className="text-slate-200 font-mono">{formatCurrency(currentMonthKPI.sclMeta)}</strong></span>
-            <span className={currentMonthKPI.sclAtual <= currentMonthKPI.sclAnterior ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-              {currentMonthKPI.sclAtual <= currentMonthKPI.sclAnterior ? 'Melhora vs Ant.' : 'Aumento vs Ant.'}
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+            <span>Meta: <strong className="text-slate-800 font-mono">{formatMetric(currentMonthMetaVal)}</strong></span>
+            <span className={currentMonthRealVal <= currentMonthAnteriorVal ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+              {currentMonthRealVal <= currentMonthAnteriorVal ? 'Melhora vs Ant.' : 'Aumento vs Ant.'}
             </span>
           </div>
         </div>
@@ -583,50 +715,50 @@ export const DashboardView: React.FC = () => {
         {/* Card 2: Meta 2026 Mês Atual */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-4 transition-all duration-200 shadow-md hover:shadow-xl cursor-pointer relative overflow-hidden"
+          className="group bg-white border border-blue-200 hover:border-amber-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
         >
           <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-              Meta Orçada 2026
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+              Meta Orçada 2026 • {unitMetric === 'valor' ? 'R$' : 'HL'}
             </span>
-            <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-amber-500/10 transition-colors">
-              <Building className="w-4 h-4 text-amber-400" />
+            <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 group-hover:bg-amber-100 transition-colors">
+              <Building className="w-4 h-4 text-amber-600" />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-400 font-mono">
-            {formatCurrency(currentMonthKPI.sclMeta)}
+          <div className="text-2xl font-black text-amber-600 font-mono">
+            {formatMetric(currentMonthMetaVal)}
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
             <span>Orçamento CD</span>
-            <span className="text-amber-400 font-semibold">{formatMesAno(currentMonthKPI.mes)}</span>
+            <span className="text-amber-700 font-bold">{formatMesAno(currentMonthKPI.mes)}</span>
           </div>
         </div>
 
-        {/* Card 3: Desvio / Gap Financeiro */}
+        {/* Card 3: Desvio / Gap (R$ or HL) */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-slate-900 border border-slate-800 hover:border-sky-500/50 rounded-2xl p-4 transition-all duration-200 shadow-md hover:shadow-xl cursor-pointer relative overflow-hidden"
+          className="group bg-white border border-blue-200 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
         >
           <div className={`absolute top-0 left-0 right-0 h-1 ${currentMonthGap <= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-              Desvio Orçamentário (Gap)
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+              {unitMetric === 'valor' ? 'Desvio Orçamentário (Gap R$)' : 'Desvio Volumétrico (Gap HL)'}
             </span>
-            <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-sky-500/10 transition-colors">
+            <div className={`p-2 rounded-xl border transition-colors ${currentMonthGap <= 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
               {currentMonthGap <= 0 ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               ) : (
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
               )}
             </div>
           </div>
-          <div className={`text-2xl font-black font-mono ${currentMonthGap <= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {currentMonthGap <= 0 ? '-' : '+'}{formatCurrency(Math.abs(currentMonthGap))}
+          <div className={`text-2xl font-black font-mono ${currentMonthGap <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {currentMonthGap <= 0 ? '-' : '+'}{formatMetric(Math.abs(currentMonthGap))}
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
             <span>{currentMonthGap <= 0 ? (currentMonthKPI.mes === 'Consolidado' ? 'Economia no Ano' : 'Economia no Mês') : (currentMonthKPI.mes === 'Consolidado' ? 'Estouro no Ano' : 'Estouro no Mês')}</span>
-            <span className={currentMonthGap <= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+            <span className={currentMonthGap <= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
               {currentMonthGap <= 0 ? 'DENTRO DA META' : 'FORA DA META'}
             </span>
           </div>
@@ -635,23 +767,23 @@ export const DashboardView: React.FC = () => {
         {/* Card 4: % Atingimento da Meta */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-slate-900 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-4 transition-all duration-200 shadow-md hover:shadow-xl cursor-pointer relative overflow-hidden"
+          className="group bg-white border border-blue-200 hover:border-purple-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
         >
           <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
               % Atingimento Orçado
             </span>
-            <div className="p-2 rounded-lg bg-slate-800 group-hover:bg-purple-500/10 transition-colors">
-              <Percent className="w-4 h-4 text-purple-400" />
+            <div className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 group-hover:bg-purple-100 transition-colors">
+              <Percent className="w-4 h-4 text-purple-600" />
             </div>
           </div>
-          <div className="text-2xl font-black text-purple-400 font-mono">
+          <div className="text-2xl font-black text-purple-600 font-mono">
             {currentMonthAtingimento.toFixed(1)}%
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
-            <span>Média 2026: <strong className="text-slate-200">{formatCurrency(periodTotals.mediaMensalReal)}/mês</strong></span>
-            <span className="text-slate-400 font-mono">{chartMonthKPIs.length} meses</span>
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+            <span>Média 2026: <strong className="text-slate-800">{formatMetric(periodTotals.mediaMensalReal)}/mês</strong></span>
+            <span className="text-slate-500 font-mono">{chartMonthKPIs.length} meses</span>
           </div>
         </div>
       </div>
@@ -659,18 +791,18 @@ export const DashboardView: React.FC = () => {
       {/* TIME HORIZON SELECTOR & EVOLUTION CHARTS */}
       <div className="space-y-4">
         {/* Time Horizon Selector Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3.5 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-blue-200 p-3.5 rounded-2xl shadow-sm">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
-              <Calendar className="w-4 h-4 text-amber-400" />
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+              <Calendar className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-xs font-black text-white uppercase tracking-wider block">
-                Evolução Financeira Anual 2026
+              <span className="text-xs font-black text-blue-950 uppercase tracking-wider block">
+                {unitMetric === 'valor' ? 'Evolução Financeira Anual 2026 (R$)' : 'Evolução Volumétrica Anual 2026 (HL)'}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500">
                 {timeHorizon === 'anual'
-                  ? 'Comparativo Mensal Consolidado (Janeiro a Dezembro de 2026)'
+                  ? `Comparativo Mensal Consolidado (Janeiro a Dezembro de 2026) em ${unitMetric === 'valor' ? 'Reais (R$)' : 'Hectolitros (HL)'}`
                   : timeHorizon === '6m'
                   ? 'Tendência dos Últimos 6 Meses'
                   : 'Tendência dos Últimos 4 Meses'}
@@ -678,34 +810,34 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
             <button
               onClick={() => setTimeHorizon('anual')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 timeHorizon === 'anual'
-                  ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              <span>Visão Anual 2026 (12 Meses)</span>
+              <span>Visão Anual (12 Meses)</span>
             </button>
             <button
               onClick={() => setTimeHorizon('6m')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 timeHorizon === '6m'
-                  ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>6 Meses</span>
             </button>
             <button
               onClick={() => setTimeHorizon('4m')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 timeHorizon === '4m'
-                  ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>4 Meses</span>
@@ -713,18 +845,28 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* 2 MAIN FINANCIAL COMPARISON CHARTS */}
+        {/* 2 MAIN COMPARISON CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Chart 1: Comparativo Meta 2026 x Real 2026 (R$) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
+          {/* Chart 1: Comparativo Meta 2026 x Real 2026 (R$ or HL) */}
+          <div className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-emerald-400" />
-                  <span>Comparativo Meta 2026 x Real 2026 (R$)</span>
+                  {unitMetric === 'valor' ? (
+                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Droplet className="w-4 h-4 text-sky-400" />
+                  )}
+                  <span>
+                    {unitMetric === 'valor'
+                      ? 'Comparativo Meta 2026 x Real 2026 (R$)'
+                      : 'Comparativo Meta 2026 x Real 2026 (HL)'}
+                  </span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Prejuízo Financeiro Realizado vs Orçamento de Meta SCL (R$)
+                  {unitMetric === 'valor'
+                    ? 'Prejuízo Financeiro Realizado vs Orçamento de Meta SCL (R$)'
+                    : 'Perda Volumétrica Realizada vs Meta FGLI (HL)'}
                 </p>
               </div>
               <button
@@ -751,7 +893,11 @@ export const DashboardView: React.FC = () => {
                   <YAxis
                     stroke="#10b981"
                     fontSize={10}
-                    tickFormatter={(v) => `R$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}`}
+                    tickFormatter={(v) =>
+                      unitMetric === 'valor'
+                        ? `R$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}`
+                        : `${v} HL`
+                    }
                   />
                   <Tooltip
                     content={<CustomComparativoTooltip />}
@@ -760,7 +906,7 @@ export const DashboardView: React.FC = () => {
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   <Bar
                     dataKey="sclAtual"
-                    name="Real 2026 (R$)"
+                    name={`Real 2026 (${unitMetric === 'valor' ? 'R$' : 'HL'})`}
                     fill="#10b981"
                     radius={[6, 6, 0, 0]}
                     barSize={timeHorizon === 'anual' ? 20 : 36}
@@ -775,7 +921,7 @@ export const DashboardView: React.FC = () => {
                   <Line
                     type="monotone"
                     dataKey="sclMeta"
-                    name="Meta 2026 (R$)"
+                    name={`Meta 2026 (${unitMetric === 'valor' ? 'R$' : 'HL'})`}
                     stroke="#f59e0b"
                     strokeDasharray="4 4"
                     strokeWidth={2.5}
@@ -790,26 +936,30 @@ export const DashboardView: React.FC = () => {
                 <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm ml-2" /> Acima da Meta
               </span>
               <span className="font-mono text-slate-300">
-                Total Real: <strong className="text-emerald-400">{formatCurrency(periodTotals.totalSCLReal)}</strong>
+                Total Real: <strong className="text-emerald-400">{formatMetric(periodTotals.totalSCLReal)}</strong>
               </span>
             </div>
           </div>
 
-          {/* Chart 2: Variação Orçamentária Mensal (Desvio R$) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
+          {/* Chart 2: Variação Orçamentária Mensal (Desvio R$ or HL) */}
+          <div className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-sky-400" />
-                  <span>Variação Orçamentária / Gap Mensal (R$)</span>
+                <h3 className="text-sm font-bold text-blue-950 uppercase tracking-wider flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
+                  <span>
+                    {unitMetric === 'valor'
+                      ? 'Variação Orçamentária / Gap Mensal (R$)'
+                      : 'Variação Volumétrica / Gap Mensal (HL)'}
+                  </span>
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Diferença Real vs Meta (+ Desvio Acima / - Economia Abaixo da Meta)
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab('revisao')}
-                className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold"
+                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold cursor-pointer"
               >
                 <span>Revisão Mensal</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -825,29 +975,33 @@ export const DashboardView: React.FC = () => {
                   }))}
                   margin={{ top: 15, right: 15, left: -10, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.8} />
                   <XAxis
                     dataKey="mes"
                     tickFormatter={formatMesCurto}
-                    stroke="#94a3b8"
+                    stroke="#64748b"
                     fontSize={10}
                     interval={0}
                     tickLine={false}
                   />
                   <YAxis
-                    stroke="#94a3b8"
+                    stroke="#64748b"
                     fontSize={10}
-                    tickFormatter={(v) => `R$${v >= 1000 || v <= -1000 ? (v / 1000).toFixed(1) + 'k' : v}`}
+                    tickFormatter={(v) =>
+                      unitMetric === 'valor'
+                        ? `R$${v >= 1000 || v <= -1000 ? (v / 1000).toFixed(1) + 'k' : v}`
+                        : `${v} HL`
+                    }
                   />
                   <Tooltip
                     content={<CustomGapTooltip />}
-                    cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
                   />
-                  <ReferenceLine y={0} stroke="#64748b" strokeWidth={1.5} />
+                  <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   <Bar
                     dataKey="gap"
-                    name="Variação Real vs Meta (R$)"
+                    name={`Variação Real vs Meta (${unitMetric === 'valor' ? 'R$' : 'HL'})`}
                     radius={[4, 4, 0, 0]}
                     barSize={timeHorizon === 'anual' ? 20 : 36}
                   >
@@ -867,41 +1021,47 @@ export const DashboardView: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" /> Economia (Abaixo)
                 <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm ml-2" /> Desvio (Acima)
               </span>
-              <span className="font-mono text-slate-300">
-                Gap Total: <strong className={periodTotals.gapTotal <= 0 ? 'text-emerald-400' : 'text-rose-400'}>{periodTotals.gapTotal <= 0 ? '-' : '+'}{formatCurrency(Math.abs(periodTotals.gapTotal))}</strong>
+              <span className="font-mono text-slate-700">
+                Gap Total: <strong className={periodTotals.gapTotal <= 0 ? 'text-emerald-600' : 'text-rose-600'}>{periodTotals.gapTotal <= 0 ? '-' : '+'}{formatMetric(Math.abs(periodTotals.gapTotal))}</strong>
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* PARETO CHART SECTION (100% FINANCIAL R$) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+      {/* PARETO CHART SECTION (R$ or HL) */}
+      <div className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm shadow-blue-900/5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-100 pb-3">
           <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>Análise de Pareto – Prejuízo Financeiro por Motivo (R$)</span>
+            <h3 className="text-sm font-bold text-blue-950 uppercase tracking-wider flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <span>
+                {unitMetric === 'valor'
+                  ? 'Análise de Pareto – Prejuízo Financeiro por Motivo (R$)'
+                  : 'Análise de Pareto – Perda Volumétrica por Motivo (HL)'}
+              </span>
             </h3>
-            <p className="text-xs text-slate-400">
-              Regra 80/20: Identificação dos motivos que concentram a maior fatia dos custos de avarias
+            <p className="text-xs text-slate-500">
+              {unitMetric === 'valor'
+                ? 'Regra 80/20: Identificação dos motivos que concentram a maior fatia dos custos de avarias em R$'
+                : 'Regra 80/20: Identificação dos motivos com maior impacto de volume perdido em Hectolitros (HL)'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Pareto Limit Switch */}
-            <div className="bg-slate-950 p-0.5 rounded-lg border border-slate-800 flex text-[11px]">
+            <div className="bg-slate-100 p-0.5 rounded-xl border border-slate-200 flex text-[11px]">
               <button
                 onClick={() => setParetoLimit('top8')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                   paretoLimit === 'top8'
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white text-blue-950 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="Exibir os 8 maiores motivos e agrupar o restante em Outros"
               >
@@ -909,20 +1069,20 @@ export const DashboardView: React.FC = () => {
               </button>
               <button
                 onClick={() => setParetoLimit('top12')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                   paretoLimit === 'top12'
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white text-blue-950 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 Top 12
               </button>
               <button
                 onClick={() => setParetoLimit('all')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                   paretoLimit === 'all'
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white text-blue-950 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 Todos ({rawParetoSorted.length})
@@ -933,8 +1093,8 @@ export const DashboardView: React.FC = () => {
             <button
               id="btn-open-pareto-tree-modal"
               onClick={() => setIsQuebrasTreeModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all cursor-pointer shadow-md ml-1 group"
-              title="Abrir a Árvore de Decomposição Financeira do Prejuízo por Motivo"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all cursor-pointer shadow-sm ml-1 group"
+              title="Abrir a Árvore de Decomposição por Motivo"
             >
               <Network className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
               <span>Ver Detalhes (Árvore de Hierarquia)</span>
@@ -946,10 +1106,10 @@ export const DashboardView: React.FC = () => {
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={paretoChartData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.8} />
               <XAxis
                 dataKey="motivo"
-                stroke="#cbd5e1"
+                stroke="#64748b"
                 fontSize={10}
                 interval={0}
                 angle={-25}
@@ -968,24 +1128,28 @@ export const DashboardView: React.FC = () => {
                 yAxisId="left"
                 stroke="#f59e0b"
                 fontSize={10}
-                tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+                tickFormatter={(v) =>
+                  unitMetric === 'valor'
+                    ? `R$${(v / 1000).toFixed(0)}k`
+                    : `${v.toFixed(1)} HL`
+                }
               />
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                stroke="#38bdf8"
+                stroke="#0284c7"
                 fontSize={10}
                 domain={[0, 100]}
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
                 content={<CustomParetoTooltip />}
-                cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }}
+                cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
               />
               <Bar
                 yAxisId="left"
                 dataKey="valor"
-                name="Valor Perdas (R$)"
+                name={unitMetric === 'valor' ? 'Valor Perdas (R$)' : 'Volume Perdido (HL)'}
                 fill="#f59e0b"
                 radius={[4, 4, 0, 0]}
               >
@@ -1009,90 +1173,13 @@ export const DashboardView: React.FC = () => {
                 type="monotone"
                 dataKey="acumulado"
                 name="% Acumulado"
-                stroke="#38bdf8"
+                stroke="#0284c7"
                 strokeWidth={2.5}
-                dot={{ r: 4, fill: '#38bdf8' }}
+                dot={{ r: 4, fill: '#0284c7' }}
               />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      {/* RECENT LOSSES FEED (100% FINANCIAL R$) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-400" />
-              <span>Últimas Ocorrências Registradas</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Registros mais recentes de perdas financeiras no armazém
-            </p>
-          </div>
-          <button
-            onClick={() => setActiveTab('historico')}
-            className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
-          >
-            <span>Ver Histórico Completo</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {filteredPerdas.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs">
-            Nenhuma ocorrência encontrada com os filtros selecionados.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] tracking-wider font-bold border-b border-slate-800">
-                <tr>
-                  <th className="py-2.5 px-3">Data / Turno</th>
-                  <th className="py-2.5 px-3">Área</th>
-                  <th className="py-2.5 px-3">Produto / SKU</th>
-                  <th className="py-2.5 px-3">Motivo / Causa</th>
-                  <th className="py-2.5 px-3 text-right">Qtd</th>
-                  <th className="py-2.5 px-3 text-right">Valor Avaria (R$)</th>
-                  <th className="py-2.5 px-3">Responsável</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
-                {filteredPerdas.slice(0, 5).map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2.5 px-3 whitespace-nowrap">
-                      <div className="font-mono text-slate-200">{formatDateBR(p.data)}</div>
-                      <div className="text-[10px] text-slate-500">{p.turno}</div>
-                    </td>
-                    <td className="py-2.5 px-3 whitespace-nowrap">
-                      <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px]">
-                        {p.area}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-semibold text-slate-100 max-w-xs truncate">
-                      {p.produto}
-                    </td>
-                    <td className="py-2.5 px-3 max-w-xs">
-                      <div className="text-amber-400 font-bold text-[11px]">
-                        {p.codigoMotivo} - {p.motivo}
-                      </div>
-                      <div className="text-[10px] text-slate-400 truncate">{p.causa}</div>
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono text-slate-300">
-                      {p.quantidade} un/cx
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">
-                      {formatCurrency(p.valorR$)}
-                    </td>
-                    <td className="py-2.5 px-3 text-slate-400 text-[11px] truncate max-w-xs">
-                      {p.responsavel}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       {/* JSON IMPORT MODAL */}

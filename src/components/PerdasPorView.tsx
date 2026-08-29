@@ -57,24 +57,24 @@ export const PerdasPorView: React.FC = () => {
       const cached = localStorage.getItem('ambev_perdas_por_mercadoria_v1');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // fallback
     }
-    return defaultRawData as PerdaItemJSON[];
+    return [];
   });
   const [metricMode, setMetricMode] = useState<'valor' | 'quantidade'>('valor');
   const [filtroMes, setFiltroMes] = useState<string>('todos');
   const [filtroEmbalagem, setFiltroEmbalagem] = useState<string>('todas');
   const [buscaTexto, setBuscaTexto] = useState<string>('');
 
-  // Synchronize with API on mount
+  // Synchronize with API on mount and listen to global events
   React.useEffect(() => {
     fetch('/api/perdas-por')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setDataItems(data);
           try {
             localStorage.setItem('ambev_perdas_por_mercadoria_v1', JSON.stringify(data));
@@ -82,6 +82,28 @@ export const PerdasPorView: React.FC = () => {
         }
       })
       .catch(() => {});
+
+    const handleClear = () => setDataItems([]);
+    const handleReset = () => {
+      try {
+        const cached = localStorage.getItem('ambev_perdas_por_mercadoria_v1');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) setDataItems(parsed);
+        } else {
+          setDataItems(defaultRawData as PerdaItemJSON[]);
+        }
+      } catch {
+        setDataItems(defaultRawData as PerdaItemJSON[]);
+      }
+    };
+
+    window.addEventListener('ambev_platform_data_cleared', handleClear);
+    window.addEventListener('ambev_platform_data_reset', handleReset);
+    return () => {
+      window.removeEventListener('ambev_platform_data_cleared', handleClear);
+      window.removeEventListener('ambev_platform_data_reset', handleReset);
+    };
   }, []);
 
   const persistDataItems = (items: PerdaItemJSON[]) => {
@@ -295,7 +317,7 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <span>Perdas por Mercadoria</span>
+                  <span>Avarias no Total</span>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
                     Análise Estruturada & JSON
                   </span>
@@ -574,6 +596,7 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
                   }
                 />
                 <Tooltip
+                  cursor={false}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as (typeof mesesSummary)[0];

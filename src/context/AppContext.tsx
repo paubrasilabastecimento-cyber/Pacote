@@ -17,8 +17,13 @@ import {
   AREAS,
   PRODUTOS_AMBEV,
   MOTIVOS_PERDA,
+  META_ORCADA_ANUAL_2026,
+  META_ORCADA_MENSAL_PADRAO,
+  MONTHLY_METAS_MAP_2026,
 } from '../data/mockData';
 import { ItemPlanilha, DADOS_PLANILHA_DEMO } from '../utils/spreadsheetAnalyzer';
+import { subscribeToPlatformDataFirestore, savePlatformDataToFirestore } from '../utils/firestoreService';
+import { saveRefugoData } from '../utils/refugoUtils';
 
 interface AppContextType {
   activeTab: MenuItemId;
@@ -62,6 +67,7 @@ interface AppContextType {
   deleteTrocaImproprio: (id: string) => Promise<void>;
   
   resetDemoData: () => Promise<void>;
+  clearAllData: () => Promise<void>;
   isLoading: boolean;
   
   // Computed Monthly KPI for current active filter or latest month
@@ -92,22 +98,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<MenuItemId>('dashboard-geral');
   const [filtros, setFiltros] = useState<FiltroGlobal>(initialFiltros);
   
-  const [perdas, setPerdas] = useState<RegistroPerda[]>(DEMO_REGISTROS_PERDAS);
-  const [acoes, setAcoes] = useState<PlanoAcao[]>(DEMO_PLANOS_ACAO);
-  const [kpis, setKpis] = useState<KPIStats[]>(HISTORICO_KPIS);
-  const [comentarios, setComentarios] = useState<ComentarioRevisao[]>(DEMO_COMENTARIOS_REVISAO);
-  const [trocasImproprio, setTrocasImproprio] = useState<RegistroTrocaImproprio[]>(DEMO_TROCAS_IMPROPRIO);
+  const [perdas, setPerdas] = useState<RegistroPerda[]>([]);
+  const [acoes, setAcoes] = useState<PlanoAcao[]>([]);
+  const [kpis, setKpis] = useState<KPIStats[]>([]);
+  const [comentarios, setComentarios] = useState<ComentarioRevisao[]>([]);
+  const [trocasImproprio, setTrocasImproprio] = useState<RegistroTrocaImproprio[]>([]);
   const [trocaPlanilhaItens, setTrocaPlanilhaItens] = useState<ItemPlanilha[]>(() => {
     try {
       const cached = localStorage.getItem('AMBEV_TROCA_PLANILHA_ITENS');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // ignore
     }
-    return DADOS_PLANILHA_DEMO;
+    return [];
   });
   const [nomeArquivoTroca, setNomeArquivoTroca] = useState<string | null>(() => {
     try {
@@ -118,7 +124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // BroadcastChannel for multi-tab real-time sync
+  // BroadcastChannel, Firestore Real-Time listener and window event listeners for multi-tab and platform-wide sync
   useEffect(() => {
     let bc: BroadcastChannel | null = null;
     try {
@@ -126,15 +132,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bc.onmessage = (event) => {
         if (event.data && event.data.type === 'SYNC') {
           fetchData();
+        } else if (event.data && event.data.type === 'CLEAR_ALL') {
+          handleLocalClear();
+        } else if (event.data && event.data.type === 'RESET_DEMO') {
+          fetchData();
         }
       };
     } catch {
       // Fallback if BroadcastChannel not supported
     }
+
+    // Assinatura em tempo real do banco de dados na nuvem (Firestore)
+    let unsubscribeFirestore: (() => void) | null = null;
+    try {
+      unsubscribeFirestore = subscribeToPlatformDataFirestore((cloudData) => {
+        if (!cloudData) return;
+        if (Array.isArray(cloudData.perdas)) setPerdas(cloudData.perdas);
+        if (Array.isArray(cloudData.acoes)) setAcoes(cloudData.acoes);
+        if (Array.isArray(cloudData.kpis) && cloudData.kpis.length > 0) setKpis(cloudData.kpis);
+        if (Array.isArray(cloudData.comentarios)) setComentarios(cloudData.comentarios);
+        if (Array.isArray(cloudData.trocasImproprio)) setTrocasImproprio(cloudData.trocasImproprio);
+        if (Array.isArray(cloudData.trocaPlanilhaItens)) {
+          setTrocaPlanilhaItens(cloudData.trocaPlanilhaItens);
+        }
+        if (cloudData.nomeArquivoTroca !== undefined) {
+          setNomeArquivoTroca(cloudData.nomeArquivoTroca);
+        }
+        if (Array.isArray(cloudData.refugoItens) && cloudData.refugoItens.length > 0) {
+          saveRefugoData(cloudData.refugoItens);
+        }
+      });
+    } catch (err) {
+      console.warn('[Firestore] Realtime subscription fallback:', err);
+    }
+
+    const handleClearEvent = () => {
+      handleLocalClear();
+    };
+
+    const handleResetEvent = () => {
+      fetchData();
+    };
+
+    window.addEventListener('ambev_platform_data_cleared', handleClearEvent);
+    window.addEventListener('ambev_platform_data_reset', handleResetEvent);
+
     return () => {
       if (bc) bc.close();
+      if (unsubscribeFirestore) unsubscribeFirestore();
+      window.removeEventListener('ambev_platform_data_cleared', handleClearEvent);
+      window.removeEventListener('ambev_platform_data_reset', handleResetEvent);
     };
   }, []);
+
+  const handleLocalClear = () => {
+    setPerdas([]);
+    setAcoes([]);
+    setComentarios([]);
+    setTrocasImproprio([]);
+    setTrocaPlanilhaItens([]);
+    setNomeArquivoTroca(null);
+    setKpis([]);
+  };
 
   const notifySync = () => {
     try {
@@ -159,20 +218,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/troca-planilha').then((r) => r.ok ? r.json() : null),
       ]);
 
-      if (perdasRes) setPerdas(perdasRes);
-      if (acoesRes) setAcoes(acoesRes);
-      if (kpisRes) setKpis(kpisRes);
-      if (comRes) setComentarios(comRes);
-      if (trocasRes) setTrocasImproprio(trocasRes);
-      if (trocaPlanilhaRes && Array.isArray(trocaPlanilhaRes.itens) && trocaPlanilhaRes.itens.length > 0) {
+      if (perdasRes) setPerdas(Array.isArray(perdasRes) ? perdasRes : []);
+      if (acoesRes) setAcoes(Array.isArray(acoesRes) ? acoesRes : []);
+      if (kpisRes) setKpis(Array.isArray(kpisRes) ? kpisRes : []);
+      if (comRes) setComentarios(Array.isArray(comRes) ? comRes : []);
+      if (trocasRes) setTrocasImproprio(Array.isArray(trocasRes) ? trocasRes : []);
+      if (trocaPlanilhaRes && Array.isArray(trocaPlanilhaRes.itens)) {
         setTrocaPlanilhaItens(trocaPlanilhaRes.itens);
-        if (trocaPlanilhaRes.nomeArquivo !== undefined) {
-          setNomeArquivoTroca(trocaPlanilhaRes.nomeArquivo);
-        }
+        setNomeArquivoTroca(trocaPlanilhaRes.nomeArquivo !== undefined ? trocaPlanilhaRes.nomeArquivo : null);
         try {
           localStorage.setItem('AMBEV_TROCA_PLANILHA_ITENS', JSON.stringify(trocaPlanilhaRes.itens));
           if (trocaPlanilhaRes.nomeArquivo) {
             localStorage.setItem('AMBEV_TROCA_PLANILHA_NOME_ARQUIVO', trocaPlanilhaRes.nomeArquivo);
+          } else {
+            localStorage.removeItem('AMBEV_TROCA_PLANILHA_NOME_ARQUIVO');
           }
         } catch {
           // ignore
@@ -279,14 +338,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Recalculate KPIs dynamically for each month based on actual registered perdas
   const computedMonthKPIs = useMemo(() => {
     const allMonthsSet = new Set<string>();
+    // Ensure all 12 months of 2026 are included in chronological sequence
+    for (let m = 1; m <= 12; m++) {
+      allMonthsSet.add(`2026-${String(m).padStart(2, '0')}`);
+    }
     kpis.forEach((k) => allMonthsSet.add(k.mes));
     perdas.forEach((p) => {
       if (p.mesRef) allMonthsSet.add(p.mesRef);
     });
-
-    if (allMonthsSet.size === 0) {
-      allMonthsSet.add(new Date().toISOString().slice(0, 7));
-    }
 
     const sortedMonths = Array.from(allMonthsSet).sort();
 
@@ -310,7 +369,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : Math.max(0, 100 - lossPercent * 5);
 
       const fgliMeta = baseKPI?.fgliMeta ?? 8.0;
-      const sclMeta = baseKPI?.sclMeta ?? 4595.76;
+      const sclMeta = MONTHLY_METAS_MAP_2026[mes] ?? baseKPI?.sclMeta ?? META_ORCADA_MENSAL_PADRAO;
       const rsHlMeta = baseKPI?.rsHlMeta ?? 0.07;
       const wqiMeta = baseKPI?.wqiMeta ?? 98.5;
       const vlcHlMeta = baseKPI?.vlcHlMeta ?? 0.11;
@@ -353,7 +412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const lossPercent = (totalHLPerdido / totalHL) * 100;
     const wqiCalc = Math.max(0, 100 - lossPercent * 5);
 
-    const totalConsolidatedSclMeta = computedMonthKPIs.reduce((acc, k) => acc + k.sclMeta, 0) || 55149.116;
+    const totalConsolidatedSclMeta = META_ORCADA_ANUAL_2026;
     const totalConsolidatedFgliMeta = computedMonthKPIs.reduce((acc, k) => acc + k.fgliMeta, 0) || 96.0;
 
     const latest = computedMonthKPIs[computedMonthKPIs.length - 1];
@@ -401,23 +460,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const importBatchPerdas = async (items: any[], overwrite = false) => {
-    const formatted: RegistroPerda[] = items.map((item, idx) => ({
-      id: item.id || `PERD-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
-      data: item.data || new Date().toISOString().slice(0, 10),
-      mesRef: item.mesRef || (item.data ? item.data.slice(0, 7) : new Date().toISOString().slice(0, 7)),
-      turno: item.turno || '1º Turno',
-      area: item.area || 'Armazém',
-      produto: item.produto || 'Produto Indefinido',
-      quantidade: item.quantidade || 1,
-      hlPerdido: typeof item.hlPerdido === 'number' ? item.hlPerdido : 0.01,
-      valorR$: typeof item.valorR$ === 'number' ? item.valorR$ : 0,
-      codigoMotivo: item.codigoMotivo || 'M01',
-      motivo: item.motivo || 'Quebras',
-      causa: item.causa || '',
-      responsavel: item.responsavel || 'Operador',
-      observacao: item.observacao || '',
-      createdAt: item.createdAt || new Date().toISOString(),
-    }));
+    const formatted: RegistroPerda[] = items.map((item, idx) => {
+      let rawArea = String(
+        item.area ||
+          item.Area ||
+          item.AREA ||
+          item['Área'] ||
+          item['área'] ||
+          item['ÁREA'] ||
+          item.Setor ||
+          item.setor ||
+          item.Local ||
+          item.local ||
+          ''
+      ).trim();
+      const areaUpper = rawArea.toUpperCase();
+      const codLimpo = String(item.codigoMotivo || item.codQuebra || item.CodQuebra || '').replace(/^Q-?/i, '').trim();
+
+      let area = 'Armazém';
+      if (areaUpper === 'PUXADA' || areaUpper.includes('PUXADA')) {
+        area = 'Puxada';
+      } else if (
+        areaUpper === 'ROTA' ||
+        areaUpper === 'ENTREGA' ||
+        areaUpper === 'ROTA / ENTREGA' ||
+        areaUpper.includes('ROTA') ||
+        areaUpper.includes('ENTREGA')
+      ) {
+        area = 'Rota / Entrega';
+      } else if (areaUpper === 'ARMAZEM' || areaUpper === 'ARMAZÉM' || areaUpper.includes('ARMAZ')) {
+        area = 'Armazém';
+      } else if (areaUpper.includes('PATIO') || areaUpper.includes('PÁTIO')) {
+        area = 'Pátio';
+      } else if (areaUpper.includes('ENVASE') || areaUpper.includes('LINHA') || areaUpper.includes('PRODUÇÃO')) {
+        area = 'Envase';
+      } else if (areaUpper.includes('CARREGAMENTO') || areaUpper.includes('DESCARGA')) {
+        area = 'Carregamento';
+      } else if (areaUpper.includes('RECEBIMENTO')) {
+        area = 'Recebimento';
+      } else if (rawArea) {
+        area = rawArea;
+      } else if (['574', '574.4', '575', '576', '577', '578', '584', '585'].includes(codLimpo)) {
+        area = 'Puxada';
+      } else if (['545', '547', '548', '554', '557'].includes(codLimpo)) {
+        area = 'Rota / Entrega';
+      } else {
+        area = 'Armazém';
+      }
+
+      return {
+        id: item.id || `PERD-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+        data: item.data || new Date().toISOString().slice(0, 10),
+        dataHora: item.dataHora || item.data,
+        mesRef: item.mesRef || (item.data ? item.data.slice(0, 7) : new Date().toISOString().slice(0, 7)),
+        mesNome: item.mesNome,
+        turno: item.turno || item.Turno || '1º Turno',
+        area,
+        produto: item.produto || (item.Descricao ? `${item.CodProduto ? item.CodProduto + ' - ' : ''}${item.Descricao}` : 'Produto Indefinido'),
+        codProduto: item.codProduto || item.CodProduto,
+        descricaoProduto: item.descricaoProduto || item.Descricao,
+        quantidade: typeof item.quantidade === 'number' ? item.quantidade : (parseFloat(item.Quantidade) || 1),
+        hlPerdido: typeof item.hlPerdido === 'number' ? item.hlPerdido : (parseFloat(item['HECTO PERDIDO'] || item['HECTO PERDIDO ']) || 0.01),
+        valorR$: typeof item.valorR$ === 'number' ? item.valorR$ : (parseFloat(item['VALOR DA AVARIA'] || item['VALOR_DA_AVARIA'] || item.valor) || 0),
+        codigoMotivo: item.codigoMotivo || (item.CodQuebra ? (String(item.CodQuebra).startsWith('Q-') ? String(item.CodQuebra) : `Q-${item.CodQuebra}`) : 'S/C'),
+        codQuebra: item.codQuebra || item.CodQuebra,
+        motivo: item.motivo || item.Motivo || 'Quebras',
+        causa: item.causa || item.motivo || item.Motivo || '',
+        responsavel: item.responsavel || item.Colaborador || 'Operador',
+        colaborador: item.colaborador || item.Colaborador,
+        funcao: item.funcao || item.Funcao,
+        observacao: item.observacao || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+      };
+    });
 
     if (overwrite) {
       setPerdas(formatted);
@@ -637,6 +752,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const clearAllData = async () => {
+    try {
+      await fetch('/api/clear-all', { method: 'POST' });
+    } catch (err) {
+      console.warn('Erro ao chamar /api/clear-all:', err);
+    }
+    handleLocalClear();
+    notifySync();
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -670,6 +795,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTrocaImproprio,
         deleteTrocaImproprio,
         resetDemoData,
+        clearAllData,
         isLoading,
         currentMonthKPI,
         computedMonthKPIs,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Download,
   Upload,
@@ -152,8 +153,8 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <input
         type="file"
         ref={fileInputRef}
@@ -162,11 +163,11 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
         className="hidden"
       />
 
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white border border-blue-200 rounded-2xl w-full max-w-3xl shadow-2xl shadow-blue-950/20 overflow-hidden flex flex-col my-auto max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-blue-100 bg-gradient-to-r from-blue-900 to-indigo-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20">
+            <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-md text-white shadow-md border border-white/20">
               <HardDrive className="w-6 h-6" />
             </div>
             <div>
@@ -174,19 +175,19 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
                 <h3 className="text-lg font-black text-white tracking-tight">
                   Salvar Dados & Backup Geral da Plataforma
                 </h3>
-                <span className="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-emerald-400/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
                   100% Persistente
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Exporte, sincronize e faça a guarda segura de todas as abas e módulos operacionais AMBEV.
+              <p className="text-xs text-blue-100 mt-0.5">
+                Exporte, sincronize e faça a guarda segura de todas as abas e módulos operacionais.
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Fechar"
           >
             <X className="w-5 h-5" />
@@ -200,14 +201,14 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
             <div
               className={`p-4 rounded-xl border flex items-center gap-3 text-xs font-semibold animate-fadeIn ${
                 feedback.tipo === 'sucesso'
-                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                  : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}
             >
               {feedback.tipo === 'sucesso' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
               )}
               <div className="flex-1">{feedback.mensagem}</div>
             </div>
@@ -216,12 +217,12 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
           {/* Cards de Resumo dos Módulos */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-blue-600" />
                 Resumo Geral de Registros Cadastrados
               </span>
               {dataStats && (
-                <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
                   Total: {dataStats.totalRegistrosGerais.toLocaleString('pt-BR')} registros
                 </span>
               )}
@@ -229,90 +230,101 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
               {/* Quebras */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <BarChart3 className="w-3 h-3 text-amber-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <BarChart3 className="w-3 h-3 text-blue-600" />
                   Quebras / Ocorrências
                 </span>
-                <span className="text-lg font-black text-amber-400 font-mono mt-1">
+                <span className="text-lg font-black text-blue-950 font-mono mt-1">
                   {dataStats?.totalQuebras ?? '...'}
                 </span>
               </div>
 
               {/* Reposição */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <FileSpreadsheet className="w-3 h-3 text-amber-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <FileSpreadsheet className="w-3 h-3 text-amber-600" />
                   Reposição
                 </span>
-                <span className="text-lg font-black text-white font-mono mt-1">
+                <span className="text-lg font-black text-blue-950 font-mono mt-1">
                   {dataStats?.totalReposicao ?? '...'}
                 </span>
               </div>
 
-              {/* Perdas por Mercadoria */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-sky-400" />
-                  Perdas p/ Mercadoria
+              {/* Avarias no Total */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <Layers className="w-3 h-3 text-sky-600" />
+                  Avarias no Total
                 </span>
-                <span className="text-lg font-black text-sky-400 font-mono mt-1">
+                <span className="text-lg font-black text-blue-950 font-mono mt-1">
                   {dataStats?.totalPerdasPor ?? '...'}
                 </span>
               </div>
 
               {/* Consumo Interno */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <Beer className="w-3 h-3 text-emerald-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <Beer className="w-3 h-3 text-emerald-600" />
                   Consumo Interno
                 </span>
-                <span className="text-lg font-black text-emerald-400 font-mono mt-1">
+                <span className="text-lg font-black text-emerald-600 font-mono mt-1">
                   {dataStats?.totalConsumoInterno ?? '...'}
                 </span>
               </div>
 
               {/* Trocas Impróprio */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <RotateCcw className="w-3 h-3 text-purple-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <RotateCcw className="w-3 h-3 text-purple-600" />
                   Troca Impróprio
                 </span>
-                <span className="text-lg font-black text-purple-400 font-mono mt-1">
+                <span className="text-lg font-black text-purple-600 font-mono mt-1">
                   {(dataStats?.totalTrocasImproprio || 0) + (dataStats?.totalTrocaPlanilha || 0)}
                 </span>
               </div>
 
               {/* Planos 5W2H */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-rose-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-rose-600" />
                   Planos 5W2H
                 </span>
-                <span className="text-lg font-black text-rose-400 font-mono mt-1">
+                <span className="text-lg font-black text-rose-600 font-mono mt-1">
                   {dataStats?.totalPlanosAcao ?? '...'}
                 </span>
               </div>
 
               {/* Vales de Prejuízo */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <FileSpreadsheet className="w-3 h-3 text-yellow-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <FileSpreadsheet className="w-3 h-3 text-yellow-600" />
                   Vales de Prejuízo
                 </span>
-                <span className="text-lg font-black text-yellow-400 font-mono mt-1">
+                <span className="text-lg font-black text-yellow-700 font-mono mt-1">
                   {dataStats?.totalVales ?? '...'}
                 </span>
               </div>
 
               {/* KPIs & Comentários */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-blue-400" />
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-blue-600" />
                   KPIs & Revisão
                 </span>
-                <span className="text-lg font-black text-blue-400 font-mono mt-1">
+                <span className="text-lg font-black text-blue-600 font-mono mt-1">
                   {(dataStats?.totalKPIs || 0) + (dataStats?.totalComentarios || 0)}
+                </span>
+              </div>
+
+              {/* Refugo */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                  <Database className="w-3 h-3 text-emerald-600" />
+                  Refugo (Ativos)
+                </span>
+                <span className="text-lg font-black text-emerald-600 font-mono mt-1">
+                  {dataStats?.totalRefugo ?? '...'}
                 </span>
               </div>
             </div>
@@ -321,18 +333,18 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
           {/* Seção Principal de Ações de Salvamento */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Opção 1: Salvar e Baixar Arquivo JSON */}
-            <div className="p-4 rounded-xl bg-gradient-to-b from-slate-800/80 to-slate-950 border border-slate-700/80 flex flex-col justify-between hover:border-amber-500/50 transition-all">
+            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200 flex flex-col justify-between hover:border-blue-400 transition-all">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+                  <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
                     <Download className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Baixar Arquivo de Backup (JSON)</h4>
-                    <p className="text-[11px] text-slate-400">Gera um arquivo com todos os dados para guardar no seu computador</p>
+                    <h4 className="text-sm font-bold text-blue-950">Baixar Arquivo de Backup (JSON)</h4>
+                    <p className="text-[11px] text-slate-500">Gera um arquivo com todos os dados para guardar no seu computador</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
                   Exporta um pacote completo contendo todas as tabelas, lançamentos, planilhas, histórico e planos de ação.
                 </p>
               </div>
@@ -341,7 +353,7 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
                 type="button"
                 disabled={loading}
                 onClick={handleDownloadBackup}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -353,19 +365,19 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
             </div>
 
             {/* Opção 2: Gravar no Servidor e Local */}
-            <div className="p-4 rounded-xl bg-gradient-to-b from-slate-800/80 to-slate-950 border border-slate-700/80 flex flex-col justify-between hover:border-emerald-500/50 transition-all">
+            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200 flex flex-col justify-between hover:border-emerald-400 transition-all">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
                     <Save className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Sincronizar no Servidor</h4>
-                    <p className="text-[11px] text-slate-400">Persistência imediata no banco de dados e disco local</p>
+                    <h4 className="text-sm font-bold text-emerald-950">Sincronizar no Servidor</h4>
+                    <p className="text-[11px] text-slate-500">Persistência imediata no banco de dados e nuvem</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Força a gravação de todos os dados atuais em memória e no banco do servidor <code className="text-emerald-400 font-mono">data_store.json</code>.
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Força a gravação de todos os dados atuais em memória e no banco de dados Firestore da plataforma.
                 </p>
               </div>
 
@@ -373,7 +385,7 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
                 type="button"
                 disabled={loading}
                 onClick={handleSaveToServer}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -386,15 +398,15 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
           </div>
 
           {/* Seção de Restauração */}
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-slate-800 text-slate-300">
+              <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
                 <Upload className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white">Restaurar Backup Anterior</h4>
-                <p className="text-[11px] text-slate-400">
-                  Carregue um arquivo <code className="text-amber-400 font-mono">.json</code> salvo anteriormente para restaurar todas as bases
+                <h4 className="text-xs font-bold text-blue-950">Restaurar Backup Anterior</h4>
+                <p className="text-[11px] text-slate-500">
+                  Carregue um arquivo <code className="text-blue-700 font-bold font-mono">.json</code> salvo anteriormente para restaurar todas as bases
                 </p>
               </div>
             </div>
@@ -403,25 +415,25 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
               type="button"
               disabled={loading}
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer border border-slate-700 shrink-0"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold transition-all cursor-pointer border border-slate-300 shrink-0 shadow-sm"
             >
-              <Upload className="w-4 h-4 text-amber-400" />
+              <Upload className="w-4 h-4 text-blue-600" />
               <span>Selecionar Arquivo de Backup</span>
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>Última ação: {lastSaved ? `às ${lastSaved}` : 'Pronto para salvar'}</span>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
           >
             Fechar
           </button>
@@ -429,4 +441,6 @@ export const PlatformSaveModal: React.FC<PlatformSaveModalProps> = ({ isOpen, on
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };

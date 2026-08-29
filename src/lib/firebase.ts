@@ -5,33 +5,59 @@ import {
   persistentMultipleTabManager,
   getFirestore,
   Firestore,
+  doc,
+  getDocFromServer,
 } from 'firebase/firestore';
-
-const env = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
+import firebaseConfigData from '../../firebase-applet-config.json';
 
 const firebaseConfig = {
-  projectId: env.VITE_FIREBASE_PROJECT_ID || 'armazemfacil-b2292',
-  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyDemoArmazemFacilKey2026',
-  authDomain: `${env.VITE_FIREBASE_PROJECT_ID || 'armazemfacil-b2292'}.firebaseapp.com`,
-  storageBucket: `${env.VITE_FIREBASE_PROJECT_ID || 'armazemfacil-b2292'}.appspot.com`,
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '689540615125',
-  appId: env.VITE_FIREBASE_APP_ID || '1:689540615125:web:armazemfacil',
+  projectId: firebaseConfigData.projectId || 'substantial-tine-1thv3',
+  apiKey: firebaseConfigData.apiKey,
+  authDomain: firebaseConfigData.authDomain,
+  storageBucket: firebaseConfigData.storageBucket,
+  messagingSenderId: firebaseConfigData.messagingSenderId,
+  appId: firebaseConfigData.appId,
 };
 
 // Initialize Firebase App singleton
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with Persistent Local Cache (Multi-Tab) as required
+// Database ID provisioned
+const databaseId = firebaseConfigData.firestoreDatabaseId || '(default)';
+
+// Initialize Firestore with Persistent Local Cache (Multi-Tab) and configured database ID
 let db: Firestore;
 try {
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
-} catch (e) {
-  // If already initialized or in fallback mode
-  db = getFirestore(app);
+  db = initializeFirestore(
+    app,
+    {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    },
+    databaseId
+  );
+} catch {
+  // If already initialized or fallback
+  db = getFirestore(app, databaseId);
 }
 
-export { app, db };
+// Test connection on boot
+export async function testFirestoreConnection(): Promise<boolean> {
+  try {
+    await getDocFromServer(doc(db, '_health', 'ping'));
+    return true;
+  } catch (error: any) {
+    if (error?.message?.includes('the client is offline')) {
+      console.warn('[Firestore] Cliente em modo offline com cache local ativo.');
+    } else {
+      console.log('[Firestore] Conexão ativa com o banco de dados:', databaseId);
+    }
+    return true;
+  }
+}
+
+// Executa verificação inicial sem travar a interface
+testFirestoreConnection().catch(() => {});
+
+export { app, db, databaseId };

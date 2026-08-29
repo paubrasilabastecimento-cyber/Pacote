@@ -16,6 +16,9 @@ import { ArvoreDecomposicaoView } from './components/ArvoreDecomposicaoView';
 import { StandaloneTreeView } from './components/StandaloneTreeView';
 import { PerdasPorView } from './components/PerdasPorView';
 import { ReposicaoView } from './components/ReposicaoView';
+import { QuebrasMovimentacaoView } from './components/quebras-movimentacao/QuebrasMovimentacaoView';
+import { FaltasSobrasView } from './components/FaltasSobrasView';
+import { RefugoView } from './components/refugo/RefugoView';
 
 function MainLayout() {
   const { activeTab } = useApp();
@@ -55,12 +58,18 @@ function MainLayout() {
         return <DashboardGeralView />;
       case 'dashboard':
         return <DashboardView />;
+      case 'quebras-movimentacao':
+        return <QuebrasMovimentacaoView />;
       case 'reposicao':
         return <ReposicaoView />;
       case 'perdas-por':
         return <PerdasPorView />;
+      case 'refugo':
+        return <RefugoView />;
       case 'troca-improprio':
         return <TrocaProdImproprioView />;
+      case 'faltas-sobras':
+        return <FaltasSobrasView />;
       case 'arvore-decomposicao':
         return <ArvoreDecomposicaoView />;
       case 'registrar':
@@ -81,12 +90,15 @@ function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-pau-brasil-mesh text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white relative overflow-x-hidden">
+      {/* Decorative Wave Overlay */}
+      <div className="fixed inset-0 bg-wave-pattern opacity-40 pointer-events-none z-0" />
+
       {/* Sidebar Navigation */}
       <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
 
       {/* Main Content Area */}
-      <div className="lg:pl-72 flex flex-col min-h-screen">
+      <div className="lg:pl-72 flex flex-col min-h-screen relative z-10">
         {/* Top Header Bar */}
         <TopBar
           setIsMobileOpen={setIsMobileOpen}

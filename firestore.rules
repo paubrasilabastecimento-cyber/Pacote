@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permite leitura e escrita para coleções operacionais da plataforma
+    match /platform_state/{docId} {
+      allow read, write: if true;
+    }
+    match /perdas/{perdaId} {
+      allow read, write: if true;
+    }
+    match /acoes/{acaoId} {
+      allow read, write: if true;
+    }
+    match /refugo/{refugoId} {
+      allow read, write: if true;
+    }
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

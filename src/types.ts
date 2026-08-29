@@ -132,9 +132,12 @@ export interface RegistroTrocaImproprio {
 export type MenuItemId =
   | 'dashboard-geral'
   | 'dashboard'
+  | 'quebras-movimentacao'
   | 'reposicao'
   | 'perdas-por'
+  | 'refugo'
   | 'troca-improprio'
+  | 'faltas-sobras'
   | 'arvore-decomposicao'
   | 'registrar'
   | 'analise'
@@ -143,7 +146,9 @@ export type MenuItemId =
   | 'revisao'
   | 'historico';
 
+export * from './types/quebrasMovimentacao';
 export * from './types/consumoInterno';
 export * from './types/reposicao';
 export * from './types/vales';
+export * from './types/refugo';
 

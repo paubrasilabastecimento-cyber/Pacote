@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   DollarSign,
@@ -69,6 +69,7 @@ import {
   calcularTopMotoristas,
   gerarAchadosRelevantes,
   processarPlanilhaReposicao,
+  sanitizarEParsearValesJSON,
   exportarParaCSV,
   normalizarEmbalagem,
 } from '../utils/reposicaoUtils';
@@ -123,13 +124,37 @@ export const ReposicaoView: React.FC = () => {
       const cached = localStorage.getItem('AMBEV_REPOSICAO_BEBIDAS');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // fallback
     }
-    return DEMO_REPOSICAO_BEBIDAS;
+    return [];
   });
+
+  // Listen to platform-wide clear and reset events
+  useEffect(() => {
+    const handleClear = () => setItens([]);
+    const handleReset = () => {
+      try {
+        const cached = localStorage.getItem('AMBEV_REPOSICAO_BEBIDAS');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) setItens(parsed);
+        } else {
+          setItens(DEMO_REPOSICAO_BEBIDAS);
+        }
+      } catch {
+        setItens(DEMO_REPOSICAO_BEBIDAS);
+      }
+    };
+    window.addEventListener('ambev_platform_data_cleared', handleClear);
+    window.addEventListener('ambev_platform_data_reset', handleReset);
+    return () => {
+      window.removeEventListener('ambev_platform_data_cleared', handleClear);
+      window.removeEventListener('ambev_platform_data_reset', handleReset);
+    };
+  }, []);
 
   // Filtros locais
   const [filtroMes, setFiltroMes] = useState<string>('');
@@ -425,7 +450,7 @@ export const ReposicaoView: React.FC = () => {
     }
   };
 
-  // Handler para Upload de Arquivo JSON
+  // Handler para Upload de Arquivo JSON com Validação Estrita Linha por Linha
   const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -436,19 +461,12 @@ export const ReposicaoView: React.FC = () => {
     reader.onload = (evt) => {
       try {
         const text = evt.target?.result as string;
-        const parsed = JSON.parse(text);
-        const dataArray = Array.isArray(parsed) ? parsed : [parsed];
+        const itensProcessados = sanitizarEParsearValesJSON(text);
 
-        if (dataArray.length === 0) {
-          setJsonImportStatus({ tipo: 'erro', msg: 'O arquivo JSON está vazio.' });
-          return;
-        }
-
-        const itensProcessados = processarPlanilhaReposicao(dataArray);
         if (itensProcessados.length === 0) {
           setJsonImportStatus({
             tipo: 'erro',
-            msg: 'Nenhum lançamento válido encontrado no JSON. Verifique as chaves: item_numero, data_emissao, nota_fiscal, valor_total_prejuizo, etc.',
+            msg: 'Nenhum lançamento válido encontrado no JSON. Verifique as 22 chaves do padrão oficial.',
           });
           return;
         }
@@ -456,15 +474,15 @@ export const ReposicaoView: React.FC = () => {
         persistData(itensProcessados);
         setJsonImportStatus({
           tipo: 'sucesso',
-          msg: `${itensProcessados.length} vales de reposição JSON importados e processados com sucesso!`,
+          msg: `${itensProcessados.length} vales verificados linha por linha e importados com sucesso!`,
         });
         setTimeout(() => {
           setIsJsonModalOpen(false);
           setJsonImportStatus({ tipo: null, msg: '' });
         }, 1200);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setJsonImportStatus({ tipo: 'erro', msg: 'Formato JSON inválido. Certifique-se de que a sintaxe está correta.' });
+        setJsonImportStatus({ tipo: 'erro', msg: `Erro ao validar JSON: ${err.message || 'Sintaxe inválida'}` });
       }
     };
 
@@ -472,7 +490,7 @@ export const ReposicaoView: React.FC = () => {
     if (e.target) e.target.value = '';
   };
 
-  // Handler para Colar / Processar JSON
+  // Handler para Colar / Processar JSON com Validação Linha por Linha
   const handleProcessarJsonColado = () => {
     if (!jsonColado.trim()) {
       setJsonImportStatus({ tipo: 'erro', msg: 'Cole a estrutura JSON na caixa de texto.' });
@@ -480,33 +498,12 @@ export const ReposicaoView: React.FC = () => {
     }
 
     try {
-      let trimmed = jsonColado.trim();
-      let parsed: any;
-      if (trimmed.startsWith('{') && !trimmed.endsWith(']')) {
-        if (!trimmed.endsWith('}')) {
-          trimmed = `[${trimmed}]`;
-        } else if (trimmed.includes('}\n{') || trimmed.includes('},\n{') || trimmed.includes('},{')) {
-          trimmed = `[${trimmed}]`;
-        }
-      }
+      const itensProcessados = sanitizarEParsearValesJSON(jsonColado);
 
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        parsed = JSON.parse(`[${trimmed}]`);
-      }
-
-      const dataArray = Array.isArray(parsed) ? parsed : [parsed];
-      if (dataArray.length === 0) {
-        setJsonImportStatus({ tipo: 'erro', msg: 'Nenhum dado encontrado no JSON.' });
-        return;
-      }
-
-      const itensProcessados = processarPlanilhaReposicao(dataArray);
       if (itensProcessados.length === 0) {
         setJsonImportStatus({
           tipo: 'erro',
-          msg: 'Não foi possível reconhecer os campos do JSON de reposição.',
+          msg: 'Não foi possível reconhecer registros válidos no JSON de Vales.',
         });
         return;
       }
@@ -514,16 +511,16 @@ export const ReposicaoView: React.FC = () => {
       persistData(itensProcessados);
       setJsonImportStatus({
         tipo: 'sucesso',
-        msg: `${itensProcessados.length} vale(s) de reposição JSON importado(s) com sucesso!`,
+        msg: `${itensProcessados.length} vale(s) verificado(s) linha a linha e importado(s) com sucesso!`,
       });
       setJsonColado('');
       setTimeout(() => {
         setIsJsonModalOpen(false);
         setJsonImportStatus({ tipo: null, msg: '' });
       }, 1200);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setJsonImportStatus({ tipo: 'erro', msg: 'Erro de sintaxe no JSON. Verifique as vírgulas e aspas duplas.' });
+      setJsonImportStatus({ tipo: 'erro', msg: `Erro de validação no JSON: ${err.message || 'Verifique vírgulas e aspas'}` });
     }
   };
 
@@ -686,87 +683,12 @@ export const ReposicaoView: React.FC = () => {
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <span>Painel Executivo de Reposição de Bebidas</span>
+              <span>Painel Executivo de Vales &amp; Reposição de Bebidas</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl">
               Análise operacional e financeira de sinistros, quebras e vales de reposição por rota, setor, 
               motoristas, formato de embalagem, PDVs e rateios de equipe.
             </p>
-          </div>
-
-          {/* Ações Rápidas */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {/* Botão de Importar JSON */}
-            <button
-              onClick={() => {
-                setJsonImportStatus({ tipo: null, msg: '' });
-                setIsJsonModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/25 transition-all cursor-pointer transform hover:-translate-y-0.5"
-              title="Importar JSON Oficial de Reposição (item_numero, data_emissao, nota_fiscal, mapa_carga, rota_setor, motorista, valor_total_prejuizo, etc.)"
-            >
-              <FileJson className="w-4 h-4 text-slate-950" />
-              <span>Importar JSON SSTR</span>
-            </button>
-
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold text-xs border border-amber-500/30 transition-all cursor-pointer"
-              title="Importar planilha Excel (.xlsx) ou CSV com as colunas oficiais"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-amber-400" />
-              <span>Importar Planilha</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setEditItem(null);
-                setFormNovo({
-                  dataEmissao: new Date().toISOString().slice(0, 10),
-                  notaFiscal: '',
-                  mapaCarga: '',
-                  rotaSetor: 'R111',
-                  motorista: '',
-                  cpfMotorista: '',
-                  ajudante1: '',
-                  cpfAjudante1: '',
-                  ajudante2: '-',
-                  statusVale: 'Compensado',
-                  volumeTotalHL: '0.08',
-                  valorTotalPrejuizo: '',
-                  qtdItens: '1',
-                  razaoSocialCliente: 'PONTO DE VENDA (PDV)',
-                  detalhamentoSkus: '',
-                  idValeSstr: '',
-                  embalagem: 'Lata',
-                  motivo: 'Avaria em Rota',
-                  observacao: '',
-                });
-                setIsNewModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-amber-400" />
-              <span>Novo Vale SSTR</span>
-            </button>
-
-            <button
-              onClick={() => exportarParaCSV(itensFiltrados)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition-all cursor-pointer"
-              title="Exportar dados atuais para arquivo CSV com todas as colunas"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Exportar CSV</span>
-            </button>
-
-            <button
-              onClick={handleRestaurarDemo}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs border border-slate-700/60 transition-all cursor-pointer"
-              title="Restaurar dados demonstrativos padrão de 2026"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Restaurar Demo</span>
-            </button>
           </div>
         </div>
       </div>
@@ -866,45 +788,6 @@ export const ReposicaoView: React.FC = () => {
               </span>
               <span>custo unitário / caixa</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ACHADOS E DIAGNÓSTICO EXECUTIVO (3 CARDS) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card Achado 1: Mês de Pico */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-start gap-3">
-          <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
-            <Flame className="w-5 h-5" />
-          </div>
-          <div className="text-xs">
-            <div className="font-bold text-amber-400 uppercase tracking-wide">Pico Operacional</div>
-            <div className="text-white font-semibold mt-0.5">{achados.pico.mes} — {formatBRL(achados.pico.valor)}</div>
-            <p className="text-slate-400 mt-1 leading-relaxed">{achados.pico.detalhe}</p>
-          </div>
-        </div>
-
-        {/* Card Achado 2: Formato & SKU Dominante */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-start gap-3">
-          <div className="p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 shrink-0">
-            <Boxes className="w-5 h-5" />
-          </div>
-          <div className="text-xs">
-            <div className="font-bold text-sky-400 uppercase tracking-wide">Embalagem Dominante</div>
-            <div className="text-white font-semibold mt-0.5">{achados.dominante.embalagem} ({formatPercent(achados.dominante.percentualEmbalagem)})</div>
-            <p className="text-slate-400 mt-1 leading-relaxed">{achados.dominante.detalhe}</p>
-          </div>
-        </div>
-
-        {/* Card Achado 3: Rota Mais Crítica */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex items-start gap-3">
-          <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
-            <Truck className="w-5 h-5" />
-          </div>
-          <div className="text-xs">
-            <div className="font-bold text-rose-400 uppercase tracking-wide">Rota Mais Crítica</div>
-            <div className="text-white font-semibold mt-0.5">Rota {achados.rotaCritica.rota} ({formatBRL(achados.rotaCritica.valor)})</div>
-            <p className="text-slate-400 mt-1 leading-relaxed">{achados.rotaCritica.detalhe}</p>
           </div>
         </div>
       </div>
@@ -1048,6 +931,7 @@ export const ReposicaoView: React.FC = () => {
                     tickFormatter={(val) => `R$ ${val}`}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const d = payload[0].payload;
@@ -1135,6 +1019,7 @@ export const ReposicaoView: React.FC = () => {
                     width={70}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const d = payload[0].payload;
@@ -1207,6 +1092,7 @@ export const ReposicaoView: React.FC = () => {
                     tickFormatter={(val) => `R$ ${val}`}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const d = payload[0].payload;
@@ -1290,6 +1176,7 @@ export const ReposicaoView: React.FC = () => {
                     tickFormatter={(str) => (str.length > 18 ? `${str.slice(0, 18)}...` : str)}
                   />
                   <Tooltip
+                    cursor={false}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const d = payload[0].payload;

@@ -460,6 +460,50 @@ export function gerarAchadosRelevantes(itens: ItemReposicao[]): {
 }
 
 /**
+ * Validador e Sanitizador Estrito Linha por Linha de Vales JSON
+ * Inspeciona minuciosamente cada linha/registro do arquivo para garantir
+ * que todos os 22 campos do esquema oficial SSTR sejam validados e integrados corretamente.
+ */
+export function sanitizarEParsearValesJSON(jsonInput: string | any[] | Record<string, any>): ItemReposicao[] {
+  let rawList: any[] = [];
+
+  if (typeof jsonInput === 'string') {
+    const trimmed = jsonInput.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        rawList = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.vales)) {
+          rawList = parsed.vales;
+        } else if (Array.isArray(parsed.records)) {
+          rawList = parsed.records;
+        } else if (Array.isArray(parsed.data)) {
+          rawList = parsed.data;
+        } else if (Array.isArray(parsed.itens)) {
+          rawList = parsed.itens;
+        } else {
+          rawList = [parsed];
+        }
+      }
+    } catch (err: any) {
+      throw new Error(`Sintaxe JSON inválida: ${err.message || 'Verifique vírgulas e aspas'}`);
+    }
+  } else if (Array.isArray(jsonInput)) {
+    rawList = jsonInput;
+  } else if (jsonInput && typeof jsonInput === 'object') {
+    rawList = [jsonInput];
+  }
+
+  if (rawList.length === 0) {
+    return [];
+  }
+
+  return processarPlanilhaReposicao(rawList);
+}
+
+/**
  * Parser do JSON de Reposição da AMBEV
  * Suporta diretamente a nova estrutura oficial (item_numero, data_emissao, nota_fiscal, mapa_carga, rota_setor, motorista, etc.)
  * e mantém retrocompatibilidade integral.

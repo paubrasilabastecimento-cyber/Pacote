@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "RegistroPerda": {
+      "title": "Registro de Perda",
+      "description": "Registro de avarias, quebras e descartes de produto acabado",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "produto": { "type": "string" },
+        "sku": { "type": "string" },
+        "quantidade": { "type": "number" },
+        "unidade": { "type": "string" },
+        "valor": { "type": "number" },
+        "data": { "type": "string" },
+        "motivo": { "type": "string" },
+        "codigoMotivo": { "type": "string" },
+        "area": { "type": "string" },
+        "responsavel": { "type": "string" },
+        "turno": { "type": "string" },
+        "causa": { "type": "string" },
+        "observacao": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "produto", "quantidade", "valor", "data"]
+    },
+    "PlanoAcao": {
+      "title": "Plano de Ação 5W2H",
+      "description": "Ações de melhoria e contenção de perdas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "oQue": { "type": "string" },
+        "porQue": { "type": "string" },
+        "onde": { "type": "string" },
+        "quem": { "type": "string" },
+        "quando": { "type": "string" },
+        "como": { "type": "string" },
+        "quanto": { "type": "number" },
+        "status": { "type": "string" },
+        "categoria": { "type": "string" },
+        "prioridade": { "type": "string" },
+        "dataCriacao": { "type": "string" },
+        "dataConclusao": { "type": "string" },
+        "progresso": { "type": "number" }
+      },
+      "required": ["id", "oQue", "onde", "quem", "quando", "status"]
+    },
+    "RefugoItem": {
+      "title": "Item de Refugo",
+      "description": "Registro estratificado de materiais e ativos refugados",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "material": { "type": "string" },
+        "quantidade": { "type": "number" },
+        "unidade": { "type": "string" },
+        "valor": { "type": "number" },
+        "categoria": { "type": "string" },
+        "percentual": { "type": "number" },
+        "percentualAcumulado": { "type": "number" },
+        "classeABC": { "type": "string" },
+        "data": { "type": "string" }
+      },
+      "required": ["id", "material", "quantidade", "valor", "categoria"]
+    },
+    "PlatformSyncDoc": {
+      "title": "Documento de Sincronização Geral",
+      "description": "Estado consolidado das coleções da plataforma para persistência resiliente",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string" },
+        "perdas": { "type": "array" },
+        "acoes": { "type": "array" },
+        "kpis": { "type": "array" },
+        "comentarios": { "type": "array" },
+        "trocasImproprio": { "type": "array" },
+        "trocaPlanilhaItens": { "type": "array" },
+        "reposicaoItens": { "type": "array" },
+        "consumoInternoItens": { "type": "array" },
+        "perdasPorItens": { "type": "array" },
+        "quebrasMovItens": { "type": "array" },
+        "valesItens": { "type": "array" },
+        "refugoItens": { "type": "array" }
+      },
+      "required": ["updatedAt"]
+    }
+  },
+  "firestore": {
+    "/platform_state/{docId}": {
+      "schema": "PlatformSyncDoc",
+      "description": "Persistência em tempo real e em nuvem do estado geral da plataforma"
+    },
+    "/perdas/{perdaId}": {
+      "schema": "RegistroPerda",
+      "description": "Coleção de registros individuais de perdas de PA"
+    },
+    "/acoes/{acaoId}": {
+      "schema": "PlanoAcao",
+      "description": "Coleção de planos de ação 5W2H"
+    },
+    "/refugo/{refugoId}": {
+      "schema": "RefugoItem",
+      "description": "Coleção de registros de refugo de materiais"
+    }
+  }
+}

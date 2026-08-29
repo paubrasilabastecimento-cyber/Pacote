@@ -273,7 +273,7 @@ export const parseQuebrasJSON = (jsonInput: string | object): ParseResult => {
         turno = rawTurno || '1º Turno';
       else if (turnoUpper.includes('ADM')) turno = 'ADM';
 
-      // 8. CODIGO E MOTIVO DA PERDA (Q-CODQUEBRA & MOTIVO DO JSON)
+      // 8. CODIGO E MOTIVO DA PERDA (EXATO DO JSON)
       const rawCodQuebra =
         norm['CodQuebra'] !== undefined
           ? norm['CodQuebra']
@@ -283,14 +283,35 @@ export const parseQuebrasJSON = (jsonInput: string | object): ParseResult => {
           ? norm['COD_QUEBRA']
           : norm['cod_quebra'] !== undefined
           ? norm['cod_quebra']
+          : norm['CodMotivo'] !== undefined
+          ? norm['CodMotivo']
+          : norm['codMotivo'] !== undefined
+          ? norm['codMotivo']
+          : norm['COD_MOTIVO'] !== undefined
+          ? norm['COD_MOTIVO']
+          : norm['cod_motivo'] !== undefined
+          ? norm['cod_motivo']
           : norm['codigoMotivo'] !== undefined
           ? norm['codigoMotivo']
-          : '524';
+          : norm['CodigoMotivo'] !== undefined
+          ? norm['CodigoMotivo']
+          : norm['CodAvaria'] !== undefined
+          ? norm['CodAvaria']
+          : norm['codAvaria'] !== undefined
+          ? norm['codAvaria']
+          : '';
 
-      const codQuebraStr = String(rawCodQuebra).trim();
-      const codigoMotivo = codQuebraStr.toUpperCase().startsWith('Q-')
-        ? codQuebraStr.toUpperCase()
-        : `Q-${codQuebraStr}`;
+      let codQuebraStr = String(rawCodQuebra || '').trim();
+      
+      // If code was not in a dedicated column, check observacao or motivo
+      if (!codQuebraStr && typeof norm['observacao'] === 'string') {
+        const m = norm['observacao'].match(/C[oó]d(?:igo)?\s*(?:Quebra|Motivo)?\s*[:=]\s*([A-Za-z0-9.-]+)/i);
+        if (m && m[1]) codQuebraStr = m[1].trim();
+      }
+
+      const codigoMotivo = codQuebraStr
+        ? (codQuebraStr.toUpperCase().startsWith('Q-') ? codQuebraStr.toUpperCase() : `Q-${codQuebraStr}`)
+        : 'S/C';
 
       const rawMotivo = String(
         norm['Motivo'] ||
@@ -298,60 +319,125 @@ export const parseQuebrasJSON = (jsonInput: string | object): ParseResult => {
           norm['MOTIVO'] ||
           norm['DescMotivo'] ||
           norm['descMotivo'] ||
+          norm['DESCMOTIVO'] ||
+          norm['Desc_Motivo'] ||
+          norm['DESC_MOTIVO'] ||
+          norm['DescricaoMotivo'] ||
+          norm['descricaoMotivo'] ||
+          norm['DESCRICAO_MOTIVO'] ||
+          norm['Descrição do Motivo'] ||
+          norm['Descricao do Motivo'] ||
+          norm['MotivoQuebra'] ||
+          norm['motivoQuebra'] ||
+          norm['MOTIVO_QUEBRA'] ||
+          norm['Motivo da Quebra'] ||
+          norm['TipoQuebra'] ||
+          norm['tipoQuebra'] ||
+          norm['TIPO_QUEBRA'] ||
+          norm['DescTipoQuebra'] ||
+          norm['descTipoQuebra'] ||
+          norm['DescricaoQuebra'] ||
+          norm['descricaoQuebra'] ||
+          norm['TipoAvaria'] ||
+          norm['tipoAvaria'] ||
+          norm['Avaria'] ||
+          norm['avaria'] ||
+          norm['AVARIA'] ||
+          norm['DescricaoAvaria'] ||
+          norm['descricaoAvaria'] ||
+          norm['Ocorrencia'] ||
+          norm['ocorrencia'] ||
+          norm['causa'] ||
+          norm['Causa'] ||
+          norm['CAUSA'] ||
           'AVARIA / QUEBRA'
       ).trim();
 
-      // Motivo receives exactly the value from JSON Motivo (e.g. "FALTA NO PALETE", "QUEBRA COM MOVIMENTAÇÃO", etc.)
+      // Motivo receives exactly the value from JSON Motivo without modifications
       const motivo: MotivoPerda = rawMotivo.toUpperCase();
 
-      // 7. AREA - Regra: "Tudo que for quebra com movimentação é armazém. O resto são as outras áreas."
+      // 7. AREA OPERACIONAL (Preserva estritamente a área indicada no registro/JSON)
       let rawArea = String(
-        norm['Area'] || norm['area'] || norm['AREA'] || norm['Área'] || norm['área'] || ''
+        norm['Area'] ||
+          norm['area'] ||
+          norm['AREA'] ||
+          norm['Área'] ||
+          norm['área'] ||
+          norm['ÁREA'] ||
+          norm['Setor'] ||
+          norm['setor'] ||
+          norm['SETOR'] ||
+          norm['Local'] ||
+          norm['local'] ||
+          norm['LOCAL'] ||
+          norm['Localizacao'] ||
+          norm['localizacao'] ||
+          norm['Localização'] ||
+          norm['Processo'] ||
+          norm['processo'] ||
+          norm['PROCESSO'] ||
+          norm['Deposito'] ||
+          norm['deposito'] ||
+          norm['DEPOSITO'] ||
+          norm['Depósito'] ||
+          norm['depósito'] ||
+          norm['Origem'] ||
+          norm['origem'] ||
+          norm['ORIGEM'] ||
+          norm['TipoOperacao'] ||
+          norm['tipoOperacao'] ||
+          norm['Operacao'] ||
+          norm['operacao'] ||
+          norm['Rota'] ||
+          norm['rota'] ||
+          norm['ROTA'] ||
+          norm['Entrega'] ||
+          norm['entrega'] ||
+          norm['ENTREGA'] ||
+          norm['Puxada'] ||
+          norm['puxada'] ||
+          norm['PUXADA'] ||
+          ''
       ).trim();
+
       const areaUpper = rawArea.toUpperCase();
-      const motivoUpper = motivo.toUpperCase();
+      const codLimpo = codQuebraStr.replace(/^Q-?/i, '').trim();
 
       let area: Area | string = 'Armazém';
-      if (
-        motivoUpper.includes('MOVIMENTAÇÃO') ||
-        motivoUpper.includes('MOVIMENTACAO') ||
-        motivoUpper.includes('MOVIME') ||
-        codQuebraStr === '539' ||
-        (motivoUpper.includes('QUEBRA') && !motivoUpper.includes('ROTA') && !motivoUpper.includes('ENTREGA') && !motivoUpper.includes('FALTA'))
-      ) {
-        area = 'Armazém';
+      if (areaUpper === 'PUXADA' || areaUpper.includes('PUXADA')) {
+        area = 'Puxada';
       } else if (
-        motivoUpper.includes('FALTA NO PALETE') ||
-        motivoUpper.includes('FALTA PALETE') ||
-        codQuebraStr === '524' ||
-        codQuebraStr === '576'
-      ) {
-        area = areaUpper && areaUpper !== 'ARMAZEM' && areaUpper !== 'ARMAZÉM' ? rawArea : 'Falta no Palete';
-      } else if (
+        areaUpper === 'ROTA' ||
+        areaUpper === 'ENTREGA' ||
+        areaUpper === 'ROTA / ENTREGA' ||
         areaUpper.includes('ROTA') ||
         areaUpper.includes('ENTREGA') ||
-        motivoUpper.includes('ROTA') ||
-        motivoUpper.includes('ENTREGA')
+        areaUpper.includes('DISTRIBUIÇÃO') ||
+        areaUpper.includes('DISTRIBUICAO')
       ) {
         area = 'Rota / Entrega';
-      } else if (
-        motivoUpper.includes('SHELF') ||
-        motivoUpper.includes('VALIDADE') ||
-        motivoUpper.includes('VENCIMENTO') ||
-        motivoUpper.includes('ESTUFADO') ||
-        motivoUpper.includes('VAZAMENTO')
-      ) {
-        area = 'Qualidade / WQI';
-      } else if (areaUpper.includes('ENVASE') || areaUpper.includes('LINHA')) {
-        area = rawArea || 'Envase';
+      } else if (areaUpper === 'ARMAZEM' || areaUpper === 'ARMAZÉM' || areaUpper.includes('ARMAZ')) {
+        area = 'Armazém';
       } else if (areaUpper.includes('PATIO') || areaUpper.includes('PÁTIO')) {
-        area = rawArea || 'Pátio';
-      } else if (areaUpper.includes('RECEBIMENTO')) {
-        area = rawArea || 'Recebimento';
+        area = 'Pátio';
+      } else if (areaUpper.includes('ENVASE') || areaUpper.includes('LINHA') || areaUpper.includes('PRODUÇÃO') || areaUpper.includes('PRODUCAO')) {
+        area = 'Envase';
       } else if (areaUpper.includes('CARREGAMENTO') || areaUpper.includes('DESCARGA')) {
-        area = rawArea || 'Carregamento';
+        area = 'Carregamento';
+      } else if (areaUpper.includes('RECEBIMENTO')) {
+        area = 'Recebimento';
+      } else if (rawArea) {
+        // Preserva a área específica informada pelo usuário
+        area = rawArea;
       } else {
-        area = areaUpper && areaUpper !== 'ARMAZEM' && areaUpper !== 'ARMAZÉM' ? rawArea : 'Outras Áreas';
+        // Fallback apenas se o registro JSON não possuir campo de área
+        if (['574', '574.4', '575', '576', '577', '578', '584', '585'].includes(codLimpo)) {
+          area = 'Puxada';
+        } else if (['545', '547', '548', '554', '557'].includes(codLimpo)) {
+          area = 'Rota / Entrega';
+        } else {
+          area = 'Armazém';
+        }
       }
 
       // 9. RESPONSÁVEL / COLABORADOR / FUNÇÃO

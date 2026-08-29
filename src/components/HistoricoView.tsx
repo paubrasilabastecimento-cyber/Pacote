@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { parseQuebrasJSON } from '../utils/jsonImporter';
-import { processarPlanilhaReposicao } from '../utils/reposicaoUtils';
+import { processarPlanilhaReposicao, sanitizarEParsearValesJSON } from '../utils/reposicaoUtils';
 import { parseExcelOrCsvFile, parseJsonFile } from '../utils/perdasPorAnalytics';
 import { parseTrocaFile } from '../utils/spreadsheetAnalyzer';
 import {
@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Database,
   BarChart3,
+  Boxes,
   Layers,
   RotateCcw,
   Sparkles,
@@ -22,9 +23,18 @@ import {
   Download,
   HardDrive,
   RefreshCw,
+  Scale,
 } from 'lucide-react';
 import { PlatformSaveModal } from './PlatformSaveModal';
 import { downloadPlatformBackup, saveAllPlatformDataToServer } from '../utils/platformBackup';
+import { sanitizarEParsearQuebrasMovJSON } from '../utils/quebrasMovimentacaoUtils';
+import { ModalImportacaoFaltasSobras } from './ModalImportacaoFaltasSobras';
+import { processarImportacaoFaltasSobras } from '../utils/faltasSobrasImporter';
+import { InventarioFaltasSobrasData } from '../data/mockFaltasSobras';
+import { QuebrasMovJsonImportModal } from './quebras-movimentacao/QuebrasMovJsonImportModal';
+import { QuebraMovimentacaoItem } from '../types/quebrasMovimentacao';
+import { ValesJsonImportModal } from './ValesJsonImportModal';
+import { ItemReposicao } from '../types/reposicao';
 
 export const HistoricoView: React.FC = () => {
   const { importBatchPerdas, setActiveTab, importBatchTrocaPlanilha } = useApp();
@@ -32,6 +42,15 @@ export const HistoricoView: React.FC = () => {
   // Modal de Salvar Todos os Dados / Backup Geral
   const [isSaveModalOpen, setIsSaveModalOpen] = useState<boolean>(false);
   const [isQuickSaving, setIsQuickSaving] = useState<boolean>(false);
+
+  // Modal dedicado de Faltas e Sobras
+  const [isFaltasSobrasModalOpen, setIsFaltasSobrasModalOpen] = useState<boolean>(false);
+
+  // Modal dedicado de Quebras por Movimentação
+  const [isQuebrasMovModalOpen, setIsQuebrasMovModalOpen] = useState<boolean>(false);
+
+  // Modal dedicado de Vales
+  const [isValesModalOpen, setIsValesModalOpen] = useState<boolean>(false);
 
   // Status de cada importador
   const [feedback, setFeedback] = useState<{
@@ -46,6 +65,8 @@ export const HistoricoView: React.FC = () => {
   const inputReposicaoPlanilhaRef = useRef<HTMLInputElement>(null);
   const inputPerdasPorRef = useRef<HTMLInputElement>(null);
   const inputTrocaRef = useRef<HTMLInputElement>(null);
+  const inputQuebrasMovRef = useRef<HTMLInputElement>(null);
+  const inputFaltasSobrasRef = useRef<HTMLInputElement>(null);
 
   const showFeedback = (aba: string, tipo: 'sucesso' | 'erro', mensagem: string) => {
     setFeedback({ aba, tipo, mensagem });
@@ -105,7 +126,7 @@ export const HistoricoView: React.FC = () => {
     if (e.target) e.target.value = '';
   };
 
-  // 2. IMPORTAR REPOSIÇÃO (JSON)
+  // 2. IMPORTAR VALES (JSON COM VALIDAÇÃO LINHA POR LINHA)
   const handleImportReposicaoJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -113,11 +134,9 @@ export const HistoricoView: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const text = event.target?.result as string;
-        const parsed = JSON.parse(text);
-        const dataArray = Array.isArray(parsed) ? parsed : [parsed];
-        const itens = processarPlanilhaReposicao(dataArray);
+        const itens = sanitizarEParsearValesJSON(text);
         if (itens.length === 0) {
-          showFeedback('Reposição', 'erro', 'Formato incompatível com Reposição (Dt. Operacao, Descrição, Valor, Qtde, Embalagem).');
+          showFeedback('Vales', 'erro', 'O arquivo JSON não contém registros válidos no esquema de Vales.');
           return;
         }
         localStorage.setItem('AMBEV_REPOSICAO_BEBIDAS', JSON.stringify(itens));
@@ -126,16 +145,49 @@ export const HistoricoView: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: itens, overwrite: true }),
         }).catch(() => {});
-        showFeedback('Reposição', 'sucesso', `${itens.length} registros importados e salvos na plataforma com sucesso!`);
-      } catch {
-        showFeedback('Reposição', 'erro', 'JSON inválido para Reposição.');
+
+        try {
+          window.dispatchEvent(new CustomEvent('ambev_reposicao_updated'));
+        } catch {}
+
+        showFeedback('Vales', 'sucesso', `${itens.length} vales verificados linha por linha e salvos com sucesso!`);
+      } catch (err: any) {
+        showFeedback('Vales', 'erro', `Erro ao validar JSON de Vales: ${err?.message || 'Sintaxe inválida'}`);
       }
     };
     reader.readAsText(file);
     if (e.target) e.target.value = '';
   };
 
-  // 2B. IMPORTAR REPOSIÇÃO (PLANILHA EXCEL / CSV)
+  // 2B. SUCESSO DO MODAL DEDICADO DE VALES
+  const handleSuccessModalVales = async (newItems: ItemReposicao[], replaceExisting: boolean) => {
+    let finalItems: ItemReposicao[] = [];
+    if (replaceExisting) {
+      finalItems = newItems;
+    } else {
+      let atuais: ItemReposicao[] = [];
+      try {
+        const cached = localStorage.getItem('AMBEV_REPOSICAO_BEBIDAS');
+        if (cached) atuais = JSON.parse(cached);
+      } catch {}
+      finalItems = [...newItems, ...atuais];
+    }
+
+    localStorage.setItem('AMBEV_REPOSICAO_BEBIDAS', JSON.stringify(finalItems));
+    await fetch('/api/reposicao/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: finalItems, overwrite: true }),
+    }).catch(() => {});
+
+    try {
+      window.dispatchEvent(new CustomEvent('ambev_reposicao_updated'));
+    } catch {}
+
+    showFeedback('Vales', 'sucesso', `${newItems.length} vales validados linha a linha e integrados à plataforma!`);
+  };
+
+  // 2C. IMPORTAR VALES (PLANILHA EXCEL / CSV)
   const handleImportReposicaoPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -147,7 +199,7 @@ export const HistoricoView: React.FC = () => {
       const rawRows: any[] = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
       const itens = processarPlanilhaReposicao(rawRows);
       if (itens.length === 0) {
-        showFeedback('Reposição', 'erro', 'Nenhum lançamento reconhecido na planilha de Reposição.');
+        showFeedback('Vales', 'erro', 'Nenhum lançamento reconhecido na planilha de Vales.');
         return;
       }
       localStorage.setItem('AMBEV_REPOSICAO_BEBIDAS', JSON.stringify(itens));
@@ -156,9 +208,14 @@ export const HistoricoView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: itens, overwrite: true }),
       }).catch(() => {});
-      showFeedback('Reposição', 'sucesso', `${itens.length} linhas de planilha importadas e salvas na plataforma!`);
+
+      try {
+        window.dispatchEvent(new CustomEvent('ambev_reposicao_updated'));
+      } catch {}
+
+      showFeedback('Vales', 'sucesso', `${itens.length} linhas de planilha importadas e salvas na plataforma!`);
     } catch {
-      showFeedback('Reposição', 'erro', 'Erro ao ler arquivo Excel/CSV de Reposição.');
+      showFeedback('Vales', 'erro', 'Erro ao ler arquivo Excel/CSV de Vales.');
     }
     if (e.target) e.target.value = '';
   };
@@ -175,7 +232,7 @@ export const HistoricoView: React.FC = () => {
         items = await parseExcelOrCsvFile(file);
       }
       if (items.length === 0) {
-        showFeedback('Perdas por Mercadoria', 'erro', 'Nenhum item válido identificado no arquivo.');
+        showFeedback('Avarias no Total', 'erro', 'Nenhum item válido identificado no arquivo.');
         return;
       }
       localStorage.setItem('ambev_perdas_por_mercadoria_v1', JSON.stringify(items));
@@ -184,9 +241,9 @@ export const HistoricoView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items, overwrite: true }),
       }).catch(() => {});
-      showFeedback('Perdas por Mercadoria', 'sucesso', `${items.length} registros importados e salvos com sucesso!`);
+      showFeedback('Avarias no Total', 'sucesso', `${items.length} registros importados e salvos com sucesso!`);
     } catch {
-      showFeedback('Perdas por Mercadoria', 'erro', 'Falha ao processar arquivo para Perdas por Mercadoria.');
+      showFeedback('Avarias no Total', 'erro', 'Falha ao processar arquivo para Avarias no Total.');
     }
     if (e.target) e.target.value = '';
   };
@@ -210,14 +267,114 @@ export const HistoricoView: React.FC = () => {
     if (e.target) e.target.value = '';
   };
 
+  // 5. IMPORTAR QUEBRAS POR MOVIMENTAÇÃO (JSON)
+  const handleImportQuebrasMov = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const validated = sanitizarEParsearQuebrasMovJSON(text);
+        if (validated.length === 0) {
+          showFeedback('Quebras de Movimentação', 'erro', 'JSON vazio ou sem itens.');
+          return;
+        }
+
+        let atuais: any[] = [];
+        try {
+          const cached = localStorage.getItem('AMBEV_QUEBRAS_MOVIMENTACAO');
+          if (cached) atuais = JSON.parse(cached);
+        } catch {}
+
+        const mesclados = [...validated, ...atuais];
+        localStorage.setItem('AMBEV_QUEBRAS_MOVIMENTACAO', JSON.stringify(mesclados));
+        await fetch('/api/quebras-movimentacao/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: mesclados, overwrite: true }),
+        }).catch(() => {});
+
+        try {
+          window.dispatchEvent(new CustomEvent('ambev_quebras_mov_updated'));
+        } catch {}
+
+        showFeedback('Quebras de Movimentação', 'sucesso', `${validated.length} quebras por movimentação importadas com sucesso!`);
+      } catch (err: any) {
+        showFeedback('Quebras de Movimentação', 'erro', `Erro no JSON de Quebras por Movimentação: ${err?.message || 'Arquivo inválido'}`);
+      }
+    };
+    reader.readAsText(file);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleSuccessModalQuebrasMov = async (items: QuebraMovimentacaoItem[], replaceExisting: boolean) => {
+    let finalItems = items;
+    if (!replaceExisting) {
+      let atuais: any[] = [];
+      try {
+        const cached = localStorage.getItem('AMBEV_QUEBRAS_MOVIMENTACAO');
+        if (cached) atuais = JSON.parse(cached);
+      } catch {}
+      finalItems = [...items, ...atuais];
+    }
+    localStorage.setItem('AMBEV_QUEBRAS_MOVIMENTACAO', JSON.stringify(finalItems));
+    await fetch('/api/quebras-movimentacao/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: finalItems, overwrite: true }),
+    }).catch(() => {});
+
+    try {
+      window.dispatchEvent(new CustomEvent('ambev_quebras_mov_updated'));
+    } catch {}
+
+    showFeedback('Quebras de Movimentação', 'sucesso', `${items.length} quebras por movimentação importadas com sucesso!`);
+  };
+
+  // 6. IMPORTAR FALTAS E SOBRAS DE INVENTÁRIO (JSON CONJUNTO)
+  const handleImportFaltasSobrasDireto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        const resultado = processarImportacaoFaltasSobras(parsed);
+        localStorage.setItem('ambev_inventario_faltas_sobras', JSON.stringify(resultado));
+        showFeedback(
+          'Faltas & Sobras',
+          'sucesso',
+          `Inventário de Faltas & Sobras alimentado com sucesso! (${resultado.total_itens} SKUs auditados)`
+        );
+      } catch (err: any) {
+        showFeedback('Faltas & Sobras', 'erro', `Erro ao processar Faltas & Sobras: ${err?.message || 'JSON inválido'}`);
+      }
+    };
+    reader.readAsText(file);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleSucessoModalFaltasSobras = (data: InventarioFaltasSobrasData) => {
+    localStorage.setItem('ambev_inventario_faltas_sobras', JSON.stringify(data));
+    showFeedback(
+      'Faltas & Sobras',
+      'sucesso',
+      `Inventário de Faltas & Sobras alimentado com sucesso! (${data.total_itens} SKUs auditados: ${data.itens_falta} Faltas / ${data.itens_sobra} Sobras)`
+    );
+  };
+
   return (
     <div className="space-y-6 pb-16">
       {/* Hidden File Inputs */}
       <input type="file" ref={inputQuebrasRef} accept=".json,application/json" onChange={handleImportQuebras} className="hidden" />
+      <input type="file" ref={inputQuebrasMovRef} accept=".json,application/json" onChange={handleImportQuebrasMov} className="hidden" />
       <input type="file" ref={inputReposicaoJsonRef} accept=".json,application/json" onChange={handleImportReposicaoJson} className="hidden" />
       <input type="file" ref={inputReposicaoPlanilhaRef} accept=".xlsx,.xls,.csv" onChange={handleImportReposicaoPlanilha} className="hidden" />
       <input type="file" ref={inputPerdasPorRef} accept=".json,.xlsx,.xls,.csv" onChange={handleImportPerdasPor} className="hidden" />
       <input type="file" ref={inputTrocaRef} accept=".json,application/json,.xlsx,.xls,.csv" onChange={handleImportTroca} className="hidden" />
+      <input type="file" ref={inputFaltasSobrasRef} accept=".json,application/json" onChange={handleImportFaltasSobrasDireto} className="hidden" />
 
       {/* Header Central de Importação */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
@@ -233,10 +390,10 @@ export const HistoricoView: React.FC = () => {
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Importação & Gestão de Dados
+              Importação &amp; Gestão de Dados
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 max-w-3xl mt-1">
-              Importe arquivos JSON/Planilhas para cada módulo ou salve todos os dados cadastrados da plataforma em um único arquivo de backup.
+              Importe arquivos JSON/Planilhas para alimentar cada módulo (incluindo Faltas &amp; Sobras de Inventário) ou salve todos os dados da plataforma em backup.
             </p>
           </div>
 
@@ -287,14 +444,14 @@ export const HistoricoView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-base sm:text-lg font-black text-white">
-                  Backup Geral & Salvamento de Todos os Dados
+                  Backup Geral &amp; Salvamento de Todos os Dados
                 </h3>
                 <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                   Global
                 </span>
               </div>
               <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                Gera um arquivo único consolidando <strong>Quebras Anuais</strong>, <strong>Reposição</strong>, <strong>Perdas por Mercadoria</strong>, <strong>Troca Prod. Impróprio</strong>, <strong>Planos 5W2H</strong> e <strong>Vales</strong>.
+                Gera um arquivo único consolidando <strong>Quebras Anuais</strong>, <strong>Reposição</strong>, <strong>Avarias no Total</strong>, <strong>Troca Prod. Impróprio</strong>, <strong>Faltas &amp; Sobras</strong> e <strong>Vales</strong>.
               </p>
             </div>
           </div>
@@ -346,8 +503,70 @@ export const HistoricoView: React.FC = () => {
         onClose={() => setIsSaveModalOpen(false)}
       />
 
+      {/* Modal de Alimentação de Faltas & Sobras */}
+      <ModalImportacaoFaltasSobras
+        isOpen={isFaltasSobrasModalOpen}
+        onClose={() => setIsFaltasSobrasModalOpen(false)}
+        onSuccess={handleSucessoModalFaltasSobras}
+      />
+
       {/* GRID DE CARDS DOS BOTÕES DE IMPORTAÇÃO POR ABA */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* NOVO CARD DESTACADO: FALTAS & SOBRAS — INVENTÁRIO */}
+        <div className="bg-slate-900/90 border-2 border-amber-500/50 hover:border-amber-400 rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all group relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                <Scale className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Inventário
+              </span>
+            </div>
+            <h3 className="text-base font-black text-white mb-1 flex items-center gap-1.5">
+              Alimentar Faltas &amp; Sobras
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              Importa a lista com Faltas e Sobras juntas (formato com <em>numero_item</em>, <em>promax</em>, <em>material</em>, <em>disponivel</em>, <em>fisico</em>, <em>diferenca</em>, <em>status</em>, etc.).
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-3 border-t border-slate-800/80">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFaltasSobrasModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/25 transition-all cursor-pointer active:scale-95"
+                title="Abrir editor para colar ou testar o JSON"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Alimentar JSON</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => inputFaltasSobrasRef.current?.click()}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs transition-all cursor-pointer"
+                title="Carregar arquivo .json do inventário"
+              >
+                <FileJson className="w-4 h-4" />
+                <span>Subir Arquivo</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('faltas-sobras')}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <span>Ver Dashboard de Faltas &amp; Sobras</span>
+              <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+            </button>
+          </div>
+        </div>
+
         {/* 1. ANÁLISE ANUAL DE QUEBRAS */}
         <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col justify-between transition-all group">
           <div>
@@ -383,7 +602,7 @@ export const HistoricoView: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. REPOSIÇÃO */}
+        {/* 2. VALES */}
         <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col justify-between transition-all group">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -391,43 +610,57 @@ export const HistoricoView: React.FC = () => {
                 <FileSpreadsheet className="w-5 h-5" />
               </div>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Reposição
+                Vales
               </span>
             </div>
-            <h3 className="text-base font-bold text-white mb-1">Reposição</h3>
+            <h3 className="text-base font-bold text-white mb-1">Vales</h3>
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Importa registros com Dt. Operacao, Emissao, Descrição, Qtde, Valor e Embalagem (formato padrão de reposição de bebidas).
+              Suporta formato completo com 22 campos: <code>item_numero</code>, <code>data_emissao</code>, <code>nota_fiscal</code>, <code>mapa_carga</code>, <code>rota_setor</code>, <code>motorista</code>, <code>ajudantes</code>, <code>status_vale</code>, <code>volume_total_hl</code>, <code>valor_total_prejuizo</code>, <code>rateio</code> e <code>detalhamento_skus</code>.
             </p>
           </div>
 
           <div className="space-y-2 pt-3 border-t border-slate-800/80">
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => inputReposicaoJsonRef.current?.click()}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer"
-                title="Importar arquivo JSON de Reposição"
+                type="button"
+                onClick={() => setIsValesModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                title="Abrir editor para colar ou validar JSON de Vales"
               >
-                <FileJson className="w-4 h-4" />
-                <span>Importar JSON</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Alimentar JSON</span>
               </button>
 
               <button
-                onClick={() => inputReposicaoPlanilhaRef.current?.click()}
+                type="button"
+                onClick={() => inputReposicaoJsonRef.current?.click()}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs transition-all cursor-pointer"
-                title="Importar planilha Excel (.xlsx) ou CSV de Reposição"
+                title="Subir arquivo .json de Vales com validação linha por linha"
               >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span>Planilha Excel</span>
+                <FileJson className="w-4 h-4" />
+                <span>Subir Arquivo</span>
               </button>
             </div>
 
-            <button
-              onClick={() => setActiveTab('reposicao')}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <span>Ver Aba Reposição</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => inputReposicaoPlanilhaRef.current?.click()}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700/60 transition-colors cursor-pointer"
+                title="Importar planilha Excel (.xlsx) ou CSV de Vales"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />
+                <span>Planilha Excel</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('reposicao')}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <span>Ver Aba Vales</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -442,7 +675,7 @@ export const HistoricoView: React.FC = () => {
                 Mercadoria
               </span>
             </div>
-            <h3 className="text-base font-bold text-white mb-1">Perdas por Mercadoria</h3>
+            <h3 className="text-base font-bold text-white mb-1">Avarias no Total</h3>
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
               Carga de dados de perdas por SKU/marca com análise de embalagens, Pareto de impacto financeiro e árvore hierárquica.
             </p>
@@ -460,7 +693,7 @@ export const HistoricoView: React.FC = () => {
               onClick={() => setActiveTab('perdas-por')}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
             >
-              <span>Ver Aba Perdas por Mercadoria</span>
+              <span>Ver Aba Avarias no Total</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -501,7 +734,71 @@ export const HistoricoView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* 5. QUEBRAS DE MOVIMENTAÇÃO DO ARMAZÉM */}
+        <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col justify-between transition-all group">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <Boxes className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Armazém
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-white mb-1">Quebras por Movimentação</h3>
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              Importa JSON oficial com: Data, Mês, CodProduto, Descricao, Quantidade, Area, Turno, CodQuebra, Motivo, Colaborador, Funcao, VALOR DA AVARIA, HECTO LITRO e HECTO PERDIDO.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-3 border-t border-slate-800/80">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsQuebrasMovModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                title="Abrir modal para colar JSON de Quebras por Movimentação"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Alimentar JSON</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => inputQuebrasMovRef.current?.click()}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs transition-all cursor-pointer"
+                title="Carregar arquivo .json de Quebras por Movimentação"
+              >
+                <FileJson className="w-4 h-4" />
+                <span>Subir Arquivo</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('quebras-movimentacao')}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <span>Ver Aba Quebras de Movimentação</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Modal de Quebras por Movimentação */}
+      <QuebrasMovJsonImportModal
+        isOpen={isQuebrasMovModalOpen}
+        onClose={() => setIsQuebrasMovModalOpen(false)}
+        onImport={handleSuccessModalQuebrasMov}
+      />
+
+      {/* Modal Dedicado de Vales com Validação Linha por Linha */}
+      <ValesJsonImportModal
+        isOpen={isValesModalOpen}
+        onClose={() => setIsValesModalOpen(false)}
+        onImport={handleSuccessModalVales}
+      />
     </div>
   );
 };

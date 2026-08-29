@@ -50,10 +50,12 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts';
+import { TabHeaderBanner } from './common/TabHeaderBanner';
+import { PALETA_AMBEV, CORES_GRAFICOS_AMBEV } from '../utils/themeStyles';
 
 const PALETA_CORES = [
-  '#f59e0b', // Amber (Cerveja)
-  '#38bdf8', // Sky (Refrigerante)
+  PALETA_AMBEV.ambar, // Amber (Cerveja)
+  PALETA_AMBEV.azul, // Sky (Refrigerante)
   '#a855f7', // Purple (Energético)
   '#10b981', // Emerald (Água & Isotônico)
   '#f43f5e', // Rose (Bebidas Mistas)
@@ -220,37 +222,22 @@ export const TrocaProdImproprioView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn pb-16">
       {/* 1. Header & Botão de Importação JSON */}
-      <div className="bg-white border border-blue-200 rounded-2xl p-5 sm:p-6 shadow-sm shadow-blue-900/5 relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 shadow-inner">
-                <FileSpreadsheet className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-blue-950 tracking-tight flex items-center gap-2">
-                  Trocas de Produtos Impróprios
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 font-mono">
-                    <FileCode className="w-3 h-3" /> Alimentado via JSON
-                  </span>
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Processamento dinâmico de dados de trocas e produtos impróprios: KPIs, Pareto de Produtos, Categorias, Marcas e Árvore Hierárquica.
-                </p>
-              </div>
-            </div>
+      <TabHeaderBanner
+        categoryBadge="MÓDULO 4 • TROCAS & PRODUTO IMPRÓPRIO"
+        categoryIcon={<FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />}
+        title="TROCAS DE PRODUTOS IMPRÓPRIOS — ANÁLISE DINÂMICA"
+        description={
+          <span>
+            Processamento de trocas e produtos impróprios: KPIs, Pareto de Produtos, Categorias, Marcas e Árvore Hierárquica.
             {nomeArquivo && (
-              <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500">
-                <span className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-mono text-emerald-700 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Arquivo carregado: {nomeArquivo} ({itens.length} itens)
-                </span>
-              </div>
+              <span className="ml-2 font-semibold text-emerald-300">
+                • Arquivo: {nomeArquivo} ({itens.length} registros)
+              </span>
             )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          </span>
+        }
+        rightContent={
+          <>
             <input
               type="file"
               ref={fileInputRef}
@@ -261,153 +248,112 @@ export const TrocaProdImproprioView: React.FC = () => {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isCarregando}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               title="Importar arquivo JSON ou planilha Excel/CSV de Trocas"
             >
-              <UploadCloud className="w-4 h-4 text-white" />
+              <UploadCloud className="w-3.5 h-3.5" />
               <span>{isCarregando ? 'Importando...' : 'Importar Dados (JSON / Excel)'}</span>
             </button>
 
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all shadow-sm active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
               <span>Exportar CSV</span>
             </button>
-          </div>
+          </>
+        }
+      />
+
+      {erroImportacao && (
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{erroImportacao}</span>
         </div>
+      )}
 
-        {erroImportacao && (
-          <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{erroImportacao}</span>
-          </div>
-        )}
-
-        {sucessoImportacao && (
-          <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{sucessoImportacao}</span>
-          </div>
-        )}
-      </div>
+      {sucessoImportacao && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{sucessoImportacao}</span>
+        </div>
+      )}
 
       {/* 2. Cards com os Números Principais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Valor Total */}
-        <div className="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Valor Total
             </span>
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-blue-950 font-mono">
-              {formatCurrency(analise.valorTotal)}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-              <span>Ticket Médio por Linha:</span>
-              <span className="font-mono font-bold text-blue-700">
-                {formatCurrency(analise.ticketMedio)}
-              </span>
-            </div>
+          <div className="text-base sm:text-lg font-black text-blue-950 font-mono tracking-tight">
+            {formatCurrency(analise.valorTotal)}
           </div>
-          <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>Período:</span>
-            <span className="font-mono text-slate-700 font-bold">
-              {analise.dataMinima} a {analise.dataMaxima}
-            </span>
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>Ticket Médio: <strong className="text-blue-700 font-mono">{formatCurrency(analise.ticketMedio)}</strong></span>
           </div>
         </div>
 
         {/* Categoria Dominante */}
-        <div className="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Categoria Dominante
             </span>
-            <div className="p-2 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <FolderTree className="w-4 h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-sky-700 truncate" title={analise.categoriaDominante?.categoria || '-'}>
-              {analise.categoriaDominante?.categoria || '-'}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-              <span>Total Categoria:</span>
-              <span className="font-mono font-bold text-slate-800">
-                {formatCurrency(analise.categoriaDominante?.valor || 0)}
-              </span>
-            </div>
+          <div className="text-sm sm:text-base font-black text-sky-700 truncate" title={analise.categoriaDominante?.categoria || '-'}>
+            {analise.categoriaDominante?.categoria || '-'}
           </div>
-          <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>Participação:</span>
-            <span className="font-mono text-sky-700 font-bold">
-              {(analise.categoriaDominante?.percentual || 0).toFixed(1)}% do valor total
-            </span>
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>{formatCurrency(analise.categoriaDominante?.valor || 0)}</span>
+            <span className="text-sky-700 font-mono font-bold">{(analise.categoriaDominante?.percentual || 0).toFixed(1)}%</span>
           </div>
         </div>
 
         {/* Marca Líder Global */}
-        <div className="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Marca Líder
             </span>
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Tag className="w-4 h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-emerald-700 truncate" title={analise.marcaLiderGlobal?.marca || '-'}>
-              {analise.marcaLiderGlobal?.marca || '-'}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-              <span>Valor da Marca:</span>
-              <span className="font-mono font-bold text-slate-800">
-                {formatCurrency(analise.marcaLiderGlobal?.valor || 0)}
-              </span>
-            </div>
+          <div className="text-sm sm:text-base font-black text-emerald-700 truncate" title={analise.marcaLiderGlobal?.marca || '-'}>
+            {analise.marcaLiderGlobal?.marca || '-'}
           </div>
-          <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>Participação:</span>
-            <span className="font-mono text-emerald-700 font-bold">
-              {(analise.marcaLiderGlobal?.percentual || 0).toFixed(1)}% do total
-            </span>
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>{formatCurrency(analise.marcaLiderGlobal?.valor || 0)}</span>
+            <span className="text-emerald-700 font-mono font-bold">{(analise.marcaLiderGlobal?.percentual || 0).toFixed(1)}%</span>
           </div>
         </div>
 
         {/* Mês de Maior Ocorrência (Pico) */}
-        <div className="bg-white border border-blue-200 rounded-2xl p-4 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Mês de Pico (Maior Valor)
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              Mês de Pico
             </span>
-            <div className="p-2 rounded-lg bg-purple-50 text-purple-600 border border-purple-100">
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Calendar className="w-4 h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-purple-700 truncate" title={analise.mesPico?.mesFormatado || '-'}>
-              {analise.mesPico?.mesFormatado || '-'}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-              <span>Valor no Pico:</span>
-              <span className="font-mono font-bold text-purple-700">
-                {formatCurrency(analise.mesPico?.valor || 0)}
-              </span>
-            </div>
+          <div className="text-sm sm:text-base font-black text-purple-700 truncate" title={analise.mesPico?.mesFormatado || '-'}>
+            {analise.mesPico?.mesFormatado || '-'}
           </div>
-          <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>Impacto no Período:</span>
-            <span className="font-mono text-purple-700 font-bold">
-              {(analise.mesPico?.percentual || 0).toFixed(1)}% de todo o valor
-            </span>
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>{formatCurrency(analise.mesPico?.valor || 0)}</span>
+            <span className="text-purple-700 font-mono font-bold">{(analise.mesPico?.percentual || 0).toFixed(1)}%</span>
           </div>
         </div>
       </div>

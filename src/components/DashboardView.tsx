@@ -36,9 +36,21 @@ import {
   FolderTree,
   Droplet,
   Package,
+  Globe,
+  Link as LinkIcon,
+  Loader2,
+  DownloadCloud,
+  ExternalLink,
+  FileCode,
 } from 'lucide-react';
 import { QuebrasTreeModal } from './QuebrasTreeModal';
 import { QuebrasHierarchyTree } from './QuebrasHierarchyTree';
+import { TabHeaderBanner } from './common/TabHeaderBanner';
+import {
+  fetchDataFromGitHubOrUrl,
+  isWebOrGitHubUrl,
+  normalizeGitHubRawUrl,
+} from '../utils/githubUrlFetcher';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -83,7 +95,11 @@ export const DashboardView: React.FC = () => {
 
   // JSON Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
+  const [importModalTab, setImportModalTab] = useState<'upload' | 'paste' | 'github'>('github');
   const [jsonTextInput, setJsonTextInput] = useState<string>('');
+  const [githubUrlInput, setGithubUrlInput] = useState<string>('');
+  const [isLoadingGithub, setIsLoadingGithub] = useState<boolean>(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
   const [parsedResult, setParsedResult] = useState<ParseResult | null>(null);
   const [overwriteMode, setOverwriteMode] = useState<boolean>(true);
   const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
@@ -117,10 +133,41 @@ export const DashboardView: React.FC = () => {
   const handleTextChange = (text: string) => {
     setJsonTextInput(text);
     if (text.trim()) {
+      // Auto-detect if user accidentally pasted a GitHub/Web URL in the textarea
+      if (isWebOrGitHubUrl(text.trim())) {
+        setGithubUrlInput(text.trim());
+      }
       const res = parseQuebrasJSON(text);
       setParsedResult(res);
     } else {
       setParsedResult(null);
+    }
+  };
+
+  const handleFetchGitHubData = async (urlToFetch?: string) => {
+    const targetUrl = (urlToFetch || githubUrlInput).trim();
+    if (!targetUrl) {
+      setGithubError('Informe o link do arquivo no GitHub (ou URL web).');
+      return;
+    }
+
+    setIsLoadingGithub(true);
+    setGithubError(null);
+
+    const result = await fetchDataFromGitHubOrUrl(targetUrl);
+    setIsLoadingGithub(false);
+
+    if (!result.success) {
+      setGithubError(result.error || 'Erro ao carregar dados do link informado.');
+      return;
+    }
+
+    setJsonTextInput(result.rawText);
+    const parsed = parseQuebrasJSON(result.data || result.rawText);
+    setParsedResult(parsed);
+
+    if (parsed.records.length === 0) {
+      setGithubError('O arquivo foi baixado, mas não continha a estrutura esperada de Quebras JSON.');
     }
   };
 
@@ -590,124 +637,107 @@ export const DashboardView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner Info */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 border border-blue-700/50 rounded-2xl p-5 shadow-lg shadow-blue-950/20 text-white flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="space-y-1 relative z-10">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-white/20 backdrop-blur-md text-white font-black text-xs uppercase px-2.5 py-0.5 rounded-lg tracking-wider border border-white/20">
-              Gestão Operacional Ambev 2026
-            </span>
-            <span className="text-xs text-blue-100 font-medium">
-              Mês Referência: <strong className="text-amber-300">{formatMesAno(currentMonthKPI.mes)}</strong>
-            </span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5 flex-wrap">
-            <span>
-              {unitMetric === 'valor'
-                ? 'Painel Executivo de Perdas PA (SCL R$)'
-                : 'Painel Executivo de Perdas PA (SCL HL)'}
-            </span>
-            <span className={`text-xs px-2.5 py-0.5 rounded-lg font-extrabold uppercase border ${unitMetric === 'valor' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/40' : 'bg-sky-500/30 text-sky-200 border-sky-400/40'}`}>
-              {unitMetric === 'valor' ? 'Visão em R$ (Real)' : 'Visão em HL (Hectolitro)'}
-            </span>
-          </h2>
-          <p className="text-xs text-blue-100/90 max-w-2xl">
-            {unitMetric === 'valor'
-              ? 'Monitoramento financeiro do orçamento de perdas operacionais, comparativo Meta vs Real 2026 e eficiência de custos.'
-              : 'Monitoramento volumétrico (Hectolitros - HL) de perdas operacionais, comparativo Meta vs Real 2026 e eficiência física.'}
-          </p>
-        </div>
+      <TabHeaderBanner
+        categoryBadge="MÓDULO 1 • GESTÃO OPERACIONAL"
+        categoryIcon={<BarChart3 className="w-3.5 h-3.5 text-blue-400" />}
+        title={unitMetric === 'valor' ? 'PAINEL EXECUTIVO DE PERDAS PA (SCL R$)' : 'PAINEL EXECUTIVO DE PERDAS PA (SCL HL)'}
+        description={
+          <span>
+            Monitoramento orçamentário e volumétrico de perdas operacionais • Mês Referência:{' '}
+            <strong className="text-amber-300 font-bold">{formatMesAno(currentMonthKPI.mes)}</strong>. Comparativo Meta vs. Real 2026.
+          </span>
+        }
+        rightContent={
+          <>
+            {/* R$ vs HL Metric Switcher */}
+            <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-blue-700/60 shadow-inner">
+              <button
+                id="btn-filter-metric-rs"
+                onClick={() => handleSelectMetric('valor')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  unitMetric === 'valor'
+                    ? 'bg-amber-400 text-blue-950 shadow-md font-black'
+                    : 'text-blue-200 hover:text-white hover:bg-white/10'
+                }`}
+                title="Filtrar visão em Reais (R$)"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                <span>R$ (Real)</span>
+              </button>
+              <button
+                id="btn-filter-metric-hl"
+                onClick={() => handleSelectMetric('hl')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  unitMetric === 'hl'
+                    ? 'bg-sky-400 text-blue-950 shadow-md font-black'
+                    : 'text-blue-200 hover:text-white hover:bg-white/10'
+                }`}
+                title="Filtrar visão em Hectolitros (HL)"
+              >
+                <Droplet className="w-3.5 h-3.5" />
+                <span>HL (Hectolitro)</span>
+              </button>
+            </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-start xl:justify-end relative z-10">
-          {/* R$ vs HL Metric Switcher */}
-          <div className="flex items-center bg-blue-950/60 backdrop-blur-md p-1 rounded-xl border border-blue-700/60 shadow-inner">
-            <button
-              id="btn-filter-metric-rs"
-              onClick={() => handleSelectMetric('valor')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                unitMetric === 'valor'
-                  ? 'bg-emerald-400 text-blue-950 shadow-md font-black'
-                  : 'text-blue-200 hover:text-white hover:bg-white/10'
-              }`}
-              title="Filtrar visão em Reais (R$)"
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>R$ (Real)</span>
-            </button>
-            <button
-              id="btn-filter-metric-hl"
-              onClick={() => handleSelectMetric('hl')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                unitMetric === 'hl'
-                  ? 'bg-sky-400 text-blue-950 shadow-md font-black'
-                  : 'text-blue-200 hover:text-white hover:bg-white/10'
-              }`}
-              title="Filtrar visão em Hectolitros (HL)"
-            >
-              <Droplet className="w-3.5 h-3.5" />
-              <span>HL (Hectolitro)</span>
-            </button>
-          </div>
-
-          {/* Real vs Meta Accumulated Card */}
-          <div className="flex items-center gap-4 bg-blue-950/70 backdrop-blur-md p-3 rounded-xl border border-blue-700/60">
-            <div className="text-right">
-              <div className="text-[10px] text-blue-200 uppercase tracking-wider font-bold">
-                {unitMetric === 'valor' ? 'Prejuízo Real' : 'Volume Real'}
+            {/* Real vs Meta Accumulated Card */}
+            <div className="flex items-center gap-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-blue-700/60">
+              <div className="text-right">
+                <div className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">
+                  {unitMetric === 'valor' ? 'Prejuízo Real' : 'Volume Real'}
+                </div>
+                <div className="text-base font-extrabold text-amber-300 font-mono">
+                  {formatMetric(periodTotals.totalSCLReal)}
+                </div>
               </div>
-              <div className="text-lg sm:text-xl font-extrabold text-emerald-300 font-mono">
-                {formatMetric(periodTotals.totalSCLReal)}
+              <div className="h-6 w-px bg-blue-700/80" />
+              <div className="text-left">
+                <div className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">
+                  {unitMetric === 'valor' ? 'Meta Orçada' : 'Meta HL'}
+                </div>
+                <div className="text-base font-extrabold text-sky-300 font-mono">
+                  {formatMetric(periodTotals.totalSCLMeta)}
+                </div>
               </div>
             </div>
-            <div className="h-8 w-px bg-blue-700/80" />
-            <div className="text-left">
-              <div className="text-[10px] text-blue-200 uppercase tracking-wider font-bold">
-                {unitMetric === 'valor' ? 'Meta Orçada' : 'Meta HL'}
-              </div>
-              <div className="text-lg sm:text-xl font-extrabold text-amber-300 font-mono">
-                {formatMetric(periodTotals.totalSCLMeta)}
-              </div>
-            </div>
-          </div>
 
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-blue-950 font-black px-4 py-3 rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer whitespace-nowrap"
-            title="Importar arquivo JSON de quebras para alimentar toda a análise anual"
-          >
-            <Upload className="w-4 h-4 text-blue-950" />
-            <span>Importar JSON de Quebras</span>
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+              title="Importar arquivo JSON de quebras para alimentar toda a análise anual"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Importar JSON</span>
+            </button>
+          </>
+        }
+      />
 
       {/* 4 MAIN SUMMARY CARDS (R$ or HL) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Real Mês Atual */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-white border border-blue-200 hover:border-emerald-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
+          className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 cursor-pointer group"
         >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-              Real 2026 ({formatMesCurto(currentMonthKPI.mes)}) • {unitMetric === 'valor' ? 'R$' : 'HL'}
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              1. Real ({formatMesCurto(currentMonthKPI.mes)}) • {unitMetric === 'valor' ? 'R$' : 'HL'}
             </span>
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 group-hover:bg-emerald-100 transition-colors">
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               {unitMetric === 'valor' ? (
-                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <BarChart3 className="w-4 h-4" />
               ) : (
-                <Droplet className="w-4 h-4 text-emerald-600" />
+                <Droplet className="w-4 h-4" />
               )}
             </div>
           </div>
-          <div className="text-2xl font-black text-blue-950 font-mono">
+          <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
             {formatMetric(currentMonthRealVal)}
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
             <span>Meta: <strong className="text-slate-800 font-mono">{formatMetric(currentMonthMetaVal)}</strong></span>
-            <span className={currentMonthRealVal <= currentMonthAnteriorVal ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
-              {currentMonthRealVal <= currentMonthAnteriorVal ? 'Melhora vs Ant.' : 'Aumento vs Ant.'}
+            <span className="text-blue-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+              Detalhar <ArrowRight className="w-3 h-3" />
             </span>
           </div>
         </div>
@@ -715,49 +745,47 @@ export const DashboardView: React.FC = () => {
         {/* Card 2: Meta 2026 Mês Atual */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-white border border-blue-200 hover:border-amber-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
+          className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 cursor-pointer group"
         >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-              Meta Orçada 2026 • {unitMetric === 'valor' ? 'R$' : 'HL'}
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              2. Meta Orçada 2026 • {unitMetric === 'valor' ? 'R$' : 'HL'}
             </span>
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 group-hover:bg-amber-100 transition-colors">
-              <Building className="w-4 h-4 text-amber-600" />
+            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-600 font-mono">
+          <div className="text-xl sm:text-2xl font-black text-sky-700 font-mono">
             {formatMetric(currentMonthMetaVal)}
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
             <span>Orçamento CD</span>
-            <span className="text-amber-700 font-bold">{formatMesAno(currentMonthKPI.mes)}</span>
+            <span className="text-blue-600 font-bold">{formatMesAno(currentMonthKPI.mes)}</span>
           </div>
         </div>
 
         {/* Card 3: Desvio / Gap (R$ or HL) */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-white border border-blue-200 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
+          className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 cursor-pointer group"
         >
-          <div className={`absolute top-0 left-0 right-0 h-1 ${currentMonthGap <= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-              {unitMetric === 'valor' ? 'Desvio Orçamentário (Gap R$)' : 'Desvio Volumétrico (Gap HL)'}
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              3. Desvio Orçamentário (Gap)
             </span>
-            <div className={`p-2 rounded-xl border transition-colors ${currentMonthGap <= 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+            <div className={`w-8 h-8 rounded-xl border flex items-center justify-center group-hover:scale-110 transition-transform ${currentMonthGap <= 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
               {currentMonthGap <= 0 ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4" />
               ) : (
-                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                <AlertTriangle className="w-4 h-4" />
               )}
             </div>
           </div>
-          <div className={`text-2xl font-black font-mono ${currentMonthGap <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <div className={`text-xl sm:text-2xl font-black font-mono ${currentMonthGap <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
             {currentMonthGap <= 0 ? '-' : '+'}{formatMetric(Math.abs(currentMonthGap))}
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
-            <span>{currentMonthGap <= 0 ? (currentMonthKPI.mes === 'Consolidado' ? 'Economia no Ano' : 'Economia no Mês') : (currentMonthKPI.mes === 'Consolidado' ? 'Estouro no Ano' : 'Estouro no Mês')}</span>
+            <span>{currentMonthGap <= 0 ? 'Economia no Período' : 'Estouro no Período'}</span>
             <span className={currentMonthGap <= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
               {currentMonthGap <= 0 ? 'DENTRO DA META' : 'FORA DA META'}
             </span>
@@ -767,23 +795,22 @@ export const DashboardView: React.FC = () => {
         {/* Card 4: % Atingimento da Meta */}
         <div
           onClick={() => setActiveTab('scl')}
-          className="group bg-white border border-blue-200 hover:border-purple-500 rounded-2xl p-4 transition-all duration-200 shadow-sm shadow-blue-900/5 hover:shadow-md cursor-pointer relative overflow-hidden"
+          className="bg-gradient-to-br from-blue-900 via-blue-950 to-slate-950 border border-blue-800 rounded-2xl p-4 sm:p-5 shadow-md text-white group"
         >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-              % Atingimento Orçado
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-blue-200">
+              4. % Atingimento Orçado
             </span>
-            <div className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 group-hover:bg-purple-100 transition-colors">
-              <Percent className="w-4 h-4 text-purple-600" />
+            <div className="w-8 h-8 rounded-xl bg-blue-600/40 text-blue-300 border border-blue-400/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Percent className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-purple-600 font-mono">
+          <div className="text-xl sm:text-2xl font-black text-amber-300 font-mono">
             {currentMonthAtingimento.toFixed(1)}%
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
-            <span>Média 2026: <strong className="text-slate-800">{formatMetric(periodTotals.mediaMensalReal)}/mês</strong></span>
-            <span className="text-slate-500 font-mono">{chartMonthKPIs.length} meses</span>
+          <div className="flex items-center justify-between text-[11px] text-blue-200/80 mt-2 pt-2 border-t border-blue-800/80">
+            <span>Média 2026: <strong className="text-white">{formatMetric(periodTotals.mediaMensalReal)}/mês</strong></span>
+            <span className="text-emerald-400 font-bold">{chartMonthKPIs.length} meses</span>
           </div>
         </div>
       </div>
@@ -848,73 +875,83 @@ export const DashboardView: React.FC = () => {
         {/* 2 MAIN COMPARISON CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Chart 1: Comparativo Meta 2026 x Real 2026 (R$ or HL) */}
-          <div className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
                   {unitMetric === 'valor' ? (
-                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    <DollarSign className="w-4 h-4" />
                   ) : (
-                    <Droplet className="w-4 h-4 text-sky-400" />
+                    <Droplet className="w-4 h-4" />
                   )}
-                  <span>
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-blue-950 text-sm">
                     {unitMetric === 'valor'
                       ? 'Comparativo Meta 2026 x Real 2026 (R$)'
                       : 'Comparativo Meta 2026 x Real 2026 (HL)'}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  {unitMetric === 'valor'
-                    ? 'Prejuízo Financeiro Realizado vs Orçamento de Meta SCL (R$)'
-                    : 'Perda Volumétrica Realizada vs Meta FGLI (HL)'}
-                </p>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {unitMetric === 'valor'
+                      ? 'Prejuízo Financeiro Realizado vs Orçamento de Meta SCL (R$)'
+                      : 'Perda Volumétrica Realizada vs Meta FGLI (HL)'}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setActiveTab('scl')}
-                className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold"
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
               >
                 <span>Detalhar SCL</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3 h-3" />
               </button>
             </div>
 
             <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartMonthKPIs} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis
                     dataKey="mes"
                     tickFormatter={formatMesCurto}
                     stroke="#94a3b8"
-                    fontSize={10}
+                    fontSize={11}
                     interval={0}
                     tickLine={false}
                   />
                   <YAxis
-                    stroke="#10b981"
-                    fontSize={10}
+                    stroke="#94a3b8"
+                    fontSize={11}
                     tickFormatter={(v) =>
                       unitMetric === 'valor'
-                        ? `R$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}`
+                        ? `R$ ${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`
                         : `${v} HL`
                     }
                   />
                   <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      borderColor: '#cbd5e1',
+                      borderRadius: '0.75rem',
+                      fontSize: '12px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      color: '#0f172a'
+                    }}
                     content={<CustomComparativoTooltip />}
-                    cursor={{ fill: 'rgba(255, 255, 255, 0.04)' }}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   <Bar
                     dataKey="sclAtual"
                     name={`Real 2026 (${unitMetric === 'valor' ? 'R$' : 'HL'})`}
-                    fill="#10b981"
-                    radius={[6, 6, 0, 0]}
+                    fill="#f59e0b"
+                    radius={[4, 4, 0, 0]}
                     barSize={timeHorizon === 'anual' ? 20 : 36}
                   >
                     {chartMonthKPIs.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={entry.sclAtual !== null ? (entry.sclAtual <= entry.sclMeta ? '#10b981' : '#ef4444') : 'transparent'}
+                        fill={entry.sclAtual !== null ? (entry.sclAtual <= entry.sclMeta ? '#f59e0b' : '#f43f5e') : 'transparent'}
                       />
                     ))}
                   </Bar>
@@ -922,47 +959,48 @@ export const DashboardView: React.FC = () => {
                     type="monotone"
                     dataKey="sclMeta"
                     name={`Meta 2026 (${unitMetric === 'valor' ? 'R$' : 'HL'})`}
-                    stroke="#f59e0b"
-                    strokeDasharray="4 4"
+                    stroke="#38bdf8"
                     strokeWidth={2.5}
-                    dot={{ r: 3.5, fill: '#f59e0b' }}
+                    dot={{ r: 3.5, fill: '#38bdf8' }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" /> Dentro da Meta
+                <span className="w-2.5 h-2.5 bg-amber-500 rounded-sm" /> Dentro da Meta
                 <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm ml-2" /> Acima da Meta
               </span>
-              <span className="font-mono text-slate-300">
-                Total Real: <strong className="text-emerald-400">{formatMetric(periodTotals.totalSCLReal)}</strong>
+              <span className="font-mono text-slate-700">
+                Total Real: <strong className="text-slate-900">{formatMetric(periodTotals.totalSCLReal)}</strong>
               </span>
             </div>
           </div>
 
           {/* Chart 2: Variação Orçamentária Mensal (Desvio R$ or HL) */}
-          <div className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-blue-950 uppercase tracking-wider flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-blue-600" />
-                  <span>
+          <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-200">
+                  <BarChart3 className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-blue-950 text-sm">
                     {unitMetric === 'valor'
                       ? 'Variação Orçamentária / Gap Mensal (R$)'
                       : 'Variação Volumétrica / Gap Mensal (HL)'}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Diferença Real vs Meta (+ Desvio Acima / - Economia Abaixo da Meta)
-                </p>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Diferença Real vs Meta (+ Desvio Acima / - Economia Abaixo da Meta)
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setActiveTab('revisao')}
-                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold cursor-pointer"
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
               >
                 <span>Revisão Mensal</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3 h-3" />
               </button>
             </div>
 
@@ -975,25 +1013,33 @@ export const DashboardView: React.FC = () => {
                   }))}
                   margin={{ top: 15, right: 15, left: -10, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.8} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis
                     dataKey="mes"
                     tickFormatter={formatMesCurto}
-                    stroke="#64748b"
-                    fontSize={10}
+                    stroke="#94a3b8"
+                    fontSize={11}
                     interval={0}
                     tickLine={false}
                   />
                   <YAxis
-                    stroke="#64748b"
-                    fontSize={10}
+                    stroke="#94a3b8"
+                    fontSize={11}
                     tickFormatter={(v) =>
                       unitMetric === 'valor'
-                        ? `R$${v >= 1000 || v <= -1000 ? (v / 1000).toFixed(1) + 'k' : v}`
+                        ? `R$ ${v >= 1000 || v <= -1000 ? (v / 1000).toFixed(0) + 'k' : v}`
                         : `${v} HL`
                     }
                   />
                   <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      borderColor: '#cbd5e1',
+                      borderRadius: '0.75rem',
+                      fontSize: '12px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      color: '#0f172a'
+                    }}
                     content={<CustomGapTooltip />}
                     cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
                   />
@@ -1013,7 +1059,7 @@ export const DashboardView: React.FC = () => {
                       return (
                         <Cell
                           key={`gap-cell-${index}`}
-                          fill={gap <= 0 ? '#10b981' : '#ef4444'}
+                          fill={gap <= 0 ? '#10b981' : '#f43f5e'}
                         />
                       );
                     })}
@@ -1021,7 +1067,7 @@ export const DashboardView: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" /> Economia (Abaixo)
                 <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm ml-2" /> Desvio (Acima)
@@ -1219,52 +1265,204 @@ export const DashboardView: React.FC = () => {
               </div>
             )}
 
-            {/* UPLOAD & PASTE CONTROLS */}
-            <div className="space-y-4">
-              {/* File Upload Drop Area */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/60 hover:bg-slate-950 p-5 rounded-2xl text-center cursor-pointer transition-all group"
+            {/* TAB SELECTOR */}
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <button
+                type="button"
+                onClick={() => setImportModalTab('github')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  importModalTab === 'github'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
               >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".json"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Upload className="w-7 h-7 text-amber-400 mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-slate-200">
-                  Clique aqui para selecionar seu arquivo <span className="text-amber-400 font-mono">.json</span> de quebras
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1">
-                  Mapeamento automático de <code className="text-amber-400">Data</code>, <code className="text-amber-400">Mês</code>, <code className="text-amber-400">CodProduto</code>, <code className="text-amber-400">Descricao</code>, <code className="text-amber-400">CodQuebra</code>, <code className="text-amber-400">Motivo</code>, <code className="text-amber-400">Colaborador</code>, <code className="text-amber-400">Funcao</code>, <code className="text-amber-400">VALOR DA AVARIA</code>, <code className="text-amber-400">HECTO LITRO</code> e <code className="text-amber-400">HECTO PERDIDO</code>.
-                </div>
-              </div>
+                <Globe className="w-4 h-4" />
+                <span>Link do GitHub / Web</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/20 font-mono">Recomendado</span>
+              </button>
 
-              {/* Text Area for Pasting JSON */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-300">
-                    Ou cole o código JSON diretamente no campo abaixo:
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleLoadSampleJSON}
-                    className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <FileType className="w-3.5 h-3.5" />
-                    Carregar Exemplo de Quebras 2026
-                  </button>
+              <button
+                type="button"
+                onClick={() => setImportModalTab('upload')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  importModalTab === 'upload'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload de Arquivo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setImportModalTab('paste')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  importModalTab === 'paste'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <FileCode className="w-4 h-4" />
+                <span>Colar Código JSON</span>
+              </button>
+            </div>
+
+            {/* TAB CONTENT */}
+            <div className="space-y-4">
+              {/* 1. GITHUB / WEB URL TAB */}
+              {importModalTab === 'github' && (
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-white flex items-center gap-2 mb-1">
+                      <Globe className="w-4 h-4 text-amber-400" />
+                      Cole o Link do GitHub (Repositório, Arquivo ou Raw):
+                    </label>
+                    <p className="text-[11px] text-slate-400">
+                      Suporta links diretos do GitHub (<code className="text-amber-300 font-mono">github.com/.../blob/...</code> ou <code className="text-amber-300 font-mono">raw.githubusercontent.com</code>). O sistema converte automaticamente para download raw.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <div className="relative flex-1">
+                      <LinkIcon className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="url"
+                        placeholder="https://github.com/usuario/repo/blob/main/quebras.json ou raw.githubusercontent.com/..."
+                        value={githubUrlInput}
+                        onChange={(e) => {
+                          setGithubUrlInput(e.target.value);
+                          setGithubError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleFetchGitHubData();
+                          }
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none font-mono"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isLoadingGithub || !githubUrlInput.trim()}
+                      onClick={() => handleFetchGitHubData()}
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    >
+                      {isLoadingGithub ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Puxando Dados...</span>
+                        </>
+                      ) : (
+                        <>
+                          <DownloadCloud className="w-4 h-4" />
+                          <span>Puxar Informações</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {githubError && (
+                    <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3 rounded-xl text-xs space-y-1.5">
+                      <div className="flex items-center gap-2 font-bold text-rose-400">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>Aviso de Carregamento:</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">{githubError}</p>
+                      <div className="text-[10px] text-rose-300/80 bg-rose-950/40 p-2 rounded-lg mt-1 space-y-0.5">
+                        <p className="font-semibold">💡 Dicas para links do GitHub:</p>
+                        <p>• Certifique-se de que o repositório no GitHub está configurado como <strong>Público (Public)</strong>.</p>
+                        <p>• Se o arquivo estiver em um repositório privado, você pode abrir o arquivo no GitHub, copiar o texto e usar a aba <strong>"Colar Código JSON"</strong>.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Informação sobre conversão automática */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      Conversão inteligente de URL ativa: blob / raw / gists reconhecidos instantaneamente.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLoadSampleJSON}
+                      className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                    >
+                      Carregar Exemplo de Quebras 2026
+                    </button>
+                  </div>
                 </div>
-                <textarea
-                  rows={5}
-                  placeholder={`[\n  {\n    "Data": "2026-01-01 11:59:15",\n    "Mês": "JANEIRO",\n    "CodProduto": 21020,\n    "Descricao": "BUDWEISER 350ML",\n    "Quantidade": 1,\n    "Area": "ARMAZEM",\n    "Turno": "Noite",\n    "CodQuebra": 524,\n    "Motivo": "FALTA NO PALETE",\n    "Colaborador": "RONILDO",\n    "Funcao": "EMPILHADOR",\n    "VALOR DA AVARIA": 2.648683333333333,\n    "HECTO LITRO": 0.0035,\n    "HECTO PERDIDO ": 0.0035\n  }\n]`}
-                  value={jsonTextInput}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:border-amber-500 focus:outline-none"
-                />
-              </div>
+              )}
+
+              {/* 2. UPLOAD FILE TAB */}
+              {importModalTab === 'upload' && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/60 hover:bg-slate-950 p-6 rounded-2xl text-center cursor-pointer transition-all group"
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Upload className="w-8 h-8 text-amber-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                  <div className="text-xs font-bold text-slate-200">
+                    Clique aqui para selecionar seu arquivo <span className="text-amber-400 font-mono">.json</span> de quebras
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1.5">
+                    Mapeamento automático de <code className="text-amber-400">Data</code>, <code className="text-amber-400">Mês</code>, <code className="text-amber-400">CodProduto</code>, <code className="text-amber-400">Descricao</code>, <code className="text-amber-400">CodQuebra</code>, <code className="text-amber-400">Motivo</code>, <code className="text-amber-400">Colaborador</code>, <code className="text-amber-400">Funcao</code>, <code className="text-amber-400">VALOR DA AVARIA</code>, <code className="text-amber-400">HECTO LITRO</code> e <code className="text-amber-400">HECTO PERDIDO</code>.
+                  </div>
+                </div>
+              )}
+
+              {/* 3. PASTE CODE TAB */}
+              {importModalTab === 'paste' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Cole o código JSON diretamente no campo abaixo:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleLoadSampleJSON}
+                      className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <FileType className="w-3.5 h-3.5" />
+                      Carregar Exemplo de Quebras 2026
+                    </button>
+                  </div>
+
+                  {/* Quick banner if user pasted a link in textarea */}
+                  {isWebOrGitHubUrl(jsonTextInput.trim()) && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-300">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                        <span>Detectamos um link web/GitHub colado! Deseja puxar os dados deste arquivo?</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleFetchGitHubData(jsonTextInput.trim())}
+                        disabled={isLoadingGithub}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg cursor-pointer flex items-center gap-1 text-[11px] flex-shrink-0"
+                      >
+                        {isLoadingGithub ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5" />}
+                        Puxar do GitHub
+                      </button>
+                    </div>
+                  )}
+
+                  <textarea
+                    rows={6}
+                    placeholder={`[\n  {\n    "Data": "2026-01-01 11:59:15",\n    "Mês": "JANEIRO",\n    "CodProduto": 21020,\n    "Descricao": "BUDWEISER 350ML",\n    "Quantidade": 1,\n    "Area": "ARMAZEM",\n    "Turno": "Noite",\n    "CodQuebra": 524,\n    "Motivo": "FALTA NO PALETE",\n    "Colaborador": "RONILDO",\n    "Funcao": "EMPILHADOR",\n    "VALOR DA AVARIA": 2.648683333333333,\n    "HECTO LITRO": 0.0035,\n    "HECTO PERDIDO ": 0.0035\n  }\n]`}
+                    value={jsonTextInput}
+                    onChange={(e) => handleTextChange(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              )}
 
               {/* PARSED STATUS AND PREVIEW */}
               {parsedResult && (

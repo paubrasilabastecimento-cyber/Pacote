@@ -66,6 +66,7 @@ import {
 } from '../../utils/quebrasMovimentacaoUtils';
 import { QuebrasMovJsonImportModal } from './QuebrasMovJsonImportModal';
 import { QuebrasMovModalForm } from './QuebrasMovModalForm';
+import { TabHeaderBanner } from '../common/TabHeaderBanner';
 
 const CORES_GRAFICOS = ['#f59e0b', '#38bdf8', '#10b981', '#a855f7', '#f43f5e', '#6366f1', '#14b8a6', '#eab308'];
 
@@ -359,160 +360,151 @@ export const QuebrasMovimentacaoView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-fadeIn text-slate-100">
+    <div className="space-y-6 pb-12 animate-fadeIn text-slate-900">
       {/* 1. TOP HEADER & ACTION BAR */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-xl backdrop-blur-md">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
-            <Boxes className="w-6 h-6 text-slate-950" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Quebras de Movimentação do Armazém
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold tracking-wider uppercase font-mono">
-                WQI 524 / 539
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Gestão de perdas com Motivo, Colaborador, Função, Valor da Avaria e Hecto Perdido (HL) — <span className="text-amber-400 font-semibold">{items.length} registros importados</span>
-            </p>
-          </div>
-        </div>
+      <TabHeaderBanner
+        categoryBadge="MÓDULO 2 • LOGÍSTICA & ARMAZÉM"
+        categoryIcon={<Boxes className="w-3.5 h-3.5 text-amber-400" />}
+        title="QUEBRAS DE MOVIMENTAÇÃO DO ARMAZÉM"
+        description={
+          <span>
+            Gestão de perdas operacionais • WQI 524 / 539 • Motivo, Colaborador, Função, Valor da Avaria (R$) e Hecto Perdido (HL) —{' '}
+            <strong className="text-amber-300 font-bold">{items.length} registros importados</strong>
+          </span>
+        }
+        rightContent={
+          <>
+            <button
+              onClick={() => {
+                setItemEditando(null);
+                setIsFormModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Lançamento</span>
+            </button>
 
-        {/* Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => {
-              setItemEditando(null);
-              setIsFormModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Lançamento</span>
-          </button>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-md"
+            >
+              <FileCode className="w-4 h-4" />
+              <span>Importar JSON</span>
+            </button>
 
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all cursor-pointer active:scale-95"
-          >
-            <FileCode className="w-4 h-4 text-amber-400" />
-            <span>Importar JSON</span>
-          </button>
+            {items.length > 0 && (
+              <>
+                <button
+                  onClick={() => exportarQuebrasMovCSV(filteredItems)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>Exportar CSV</span>
+                </button>
 
-          {items.length > 0 && (
-            <>
-              <button
-                onClick={() => exportarQuebrasMovCSV(filteredItems)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
-              >
-                <Download className="w-4 h-4 text-emerald-400" />
-                <span>Exportar CSV</span>
-              </button>
-
-              <button
-                onClick={handleClearWQI}
-                title="Limpar todos os registros de quebras"
-                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-700 text-xs font-bold transition-all cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Limpar</span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+                <button
+                  onClick={handleClearWQI}
+                  title="Limpar todos os registros de quebras"
+                  className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-950/80 hover:bg-rose-950 text-rose-300 border border-rose-900/50 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Limpar</span>
+                </button>
+              </>
+            )}
+          </>
+        }
+      />
 
       {/* 2. EXECUTIVE KPI CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Card 1: Total Loss R$ */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-4 transition-all duration-200 shadow-lg">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Valor da Avaria</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Valor Avaria</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-lg sm:text-xl font-black font-mono text-amber-400 truncate">
+          <div className="text-base sm:text-lg font-black font-mono text-slate-900 truncate">
             {formatBRL(metricas.totalValor)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Total financeiro avariado</p>
+          <p className="text-[10px] text-slate-500 mt-1">Total avariado</p>
         </div>
 
         {/* Card 2: Hecto Perdido HL */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 rounded-2xl p-4 transition-all duration-200 shadow-lg">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hecto Perdido (HL)</span>
-            <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Hecto Perdido</span>
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Droplet className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-lg sm:text-xl font-black font-mono text-sky-400">
+          <div className="text-base sm:text-lg font-black font-mono text-sky-700">
             {formatHL(metricas.totalHlPerdido)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">{formatNumber(metricas.totalQuantidade)} unidades físicas</p>
+          <p className="text-[10px] text-slate-500 mt-1">{formatNumber(metricas.totalQuantidade)} un. físicas</p>
         </div>
 
         {/* Card 3: Ocorrências */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-4 transition-all duration-200 shadow-lg">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ocorrências</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Ocorrências</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-lg sm:text-xl font-black font-mono text-purple-400">
+          <div className="text-base sm:text-lg font-black font-mono text-blue-950">
             {formatNumber(metricas.totalOcorrencias)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Registros de avaria</p>
+          <p className="text-[10px] text-slate-500 mt-1">Registros de avaria</p>
         </div>
 
         {/* Card 4: Top Motivo */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-4 transition-all duration-200 shadow-lg">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Top Motivo</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Top Motivo</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xs sm:text-sm font-black text-emerald-400 truncate" title={metricas.topMotivo?.motivo || '-'}>
+          <div className="text-xs sm:text-sm font-black text-slate-900 truncate" title={metricas.topMotivo?.motivo || '-'}>
             {metricas.topMotivo ? metricas.topMotivo.motivo : '-'}
           </div>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
+          <p className="text-[10px] font-mono text-slate-500 mt-1">
             {metricas.topMotivo ? `${formatBRL(metricas.topMotivo.valor)}` : '-'}
           </p>
         </div>
 
         {/* Card 5: Top Colaborador */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-rose-500/50 rounded-2xl p-4 transition-all duration-200 shadow-lg">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Top Colaborador</span>
-            <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Top Colaborador</span>
+            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <User className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-sm font-black text-rose-400 truncate" title={metricas.topFuncionario?.nome || '-'}>
+          <div className="text-xs sm:text-sm font-black text-slate-900 truncate" title={metricas.topFuncionario?.nome || '-'}>
             {metricas.topFuncionario ? metricas.topFuncionario.nome : '-'}
           </div>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
-            {metricas.topFuncionario ? `${formatBRL(metricas.topFuncionario.valor)} (${metricas.topFuncionario.cargo})` : '-'}
+          <p className="text-[10px] font-mono text-slate-500 mt-1">
+            {metricas.topFuncionario ? `${formatBRL(metricas.topFuncionario.valor)}` : '-'}
           </p>
         </div>
 
         {/* Card 6: Top Produto SKU */}
-        <div className="bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 rounded-2xl p-4 transition-all duration-200 shadow-lg">
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Top Produto</span>
-            <div className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Top Produto</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Flame className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-sm font-black text-indigo-400 truncate" title={metricas.topProduto?.nome || '-'}>
+          <div className="text-xs sm:text-sm font-black text-slate-900 truncate" title={metricas.topProduto?.nome || '-'}>
             {metricas.topProduto ? metricas.topProduto.nome : '-'}
           </div>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
+          <p className="text-[10px] font-mono text-slate-500 mt-1">
             {metricas.topProduto ? formatBRL(metricas.topProduto.valor) : '-'}
           </p>
         </div>
@@ -523,33 +515,33 @@ export const QuebrasMovimentacaoView: React.FC = () => {
       {/* 4. VISUAL ANALYTICS CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Chart 1: Evolução Mensal */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
                 <BarChart2 className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Evolução de Avarias por Mês</h3>
-                <p className="text-[11px] text-slate-400">Total em R$ e volume em Hectolitros (HL)</p>
+                <h3 className="text-sm font-extrabold text-blue-950">Evolução de Avarias por Mês</h3>
+                <p className="text-[11px] text-slate-500">Total em R$ e volume em Hectolitros (HL)</p>
               </div>
             </div>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosMensais} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="mes" stroke="#64748b" tick={{ fontSize: 11 }} />
-                <YAxis stroke="#64748b" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$${v}`} />
+              <BarChart data={dadosMensais} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="mes" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} tickFormatter={(v) => `R$ ${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`} />
                 <Tooltip
-                  cursor={false}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem' }}
+                  cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '0.75rem', color: '#0f172a', fontSize: '12px' }}
                   formatter={(value: any, name: any, props: any) => [
                     `${formatBRL(Number(value))} (${formatHL(props?.payload?.hectoPerdido || 0)})`,
                     'Valor da Avaria',
                   ]}
                 />
-                <Bar dataKey="valor" fill="#f59e0b" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="valor" fill="#f59e0b" radius={[4, 4, 0, 0]}>
                   {dadosMensais.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={CORES_GRAFICOS[index % CORES_GRAFICOS.length]} />
                   ))}
@@ -560,52 +552,52 @@ export const QuebrasMovimentacaoView: React.FC = () => {
         </div>
 
         {/* Chart 2: Ranking por Colaborador & Função */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center">
                 <User className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Prejuízo por Colaborador / Função</h3>
-                <p className="text-[11px] text-slate-400">Distribuição por operador responsável</p>
+                <h3 className="text-sm font-extrabold text-blue-950">Prejuízo por Colaborador / Função</h3>
+                <p className="text-[11px] text-slate-500">Distribuição por operador responsável</p>
               </div>
             </div>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosFuncionarios} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis type="number" stroke="#64748b" tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${v}`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 10 }} tickFormatter={(v) => `R$ ${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`} />
                 <YAxis dataKey="funcionario" type="category" stroke="#64748b" tick={{ fontSize: 10 }} width={120} />
                 <Tooltip
-                  cursor={false}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem' }}
+                  cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '0.75rem', color: '#0f172a', fontSize: '12px' }}
                   formatter={(value: any, name: any, props: any) => [
                     `${formatBRL(Number(value))} (${props?.payload?.cargo || 'EMPILHADOR'}) • ${formatHL(props?.payload?.hectoPerdido || 0)}`,
                     'Valor da Avaria',
                   ]}
                 />
-                <Bar dataKey="valor" fill="#a855f7" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="valor" fill="#a855f7" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 3: Distribuição por Turno Operacional */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Distribuição por Turno Operacional</h3>
-                  <p className="text-[11px] text-slate-400">Proporção de perdas em R$ por período</p>
+                  <h3 className="text-sm font-extrabold text-blue-950">Distribuição por Turno Operacional</h3>
+                  <p className="text-[11px] text-slate-500">Proporção de perdas em R$ por período</p>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-slate-300 bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700 font-mono">
+              <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 font-mono">
                 {dadosTurnos.length} Turno{dadosTurnos.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -622,7 +614,7 @@ export const QuebrasMovimentacaoView: React.FC = () => {
                     innerRadius={54}
                     outerRadius={82}
                     paddingAngle={3}
-                    stroke="#0f172a"
+                    stroke="#ffffff"
                     strokeWidth={2}
                   >
                     {dadosTurnos.map((_, index) => (
@@ -631,11 +623,12 @@ export const QuebrasMovimentacaoView: React.FC = () => {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#cbd5e1',
                       borderRadius: '0.75rem',
                       fontSize: '12px',
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      color: '#0f172a'
                     }}
                     formatter={(value: any, name: any, props: any) => [
                       `${formatBRL(Number(value))} (${props?.payload?.porcentagem?.toFixed(1) || '0'}%) • ${formatHL(props?.payload?.hectoPerdido || 0)}`,
@@ -647,18 +640,18 @@ export const QuebrasMovimentacaoView: React.FC = () => {
               {/* Central Donut Value Indicator */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Perda Total</span>
-                <span className="text-xs font-black text-amber-400 font-mono">
+                <span className="text-xs font-black text-slate-900 font-mono">
                   {formatBRL(dadosTurnos.reduce((acc, t) => acc + t.valor, 0))}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-3 border-t border-slate-800/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-3 border-t border-slate-100">
             {dadosTurnos.map((t, idx) => (
               <div
                 key={t.turno}
-                className="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-all text-xs"
+                className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all text-xs"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span
@@ -666,15 +659,15 @@ export const QuebrasMovimentacaoView: React.FC = () => {
                     style={{ backgroundColor: CORES_GRAFICOS[idx % CORES_GRAFICOS.length] }}
                   />
                   <div className="truncate">
-                    <div className="text-slate-200 font-bold truncate">{t.turno}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-slate-800 font-bold truncate">{t.turno}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">
                       {formatHL(t.hectoPerdido)} • {t.quantidade} un
                     </div>
                   </div>
                 </div>
                 <div className="text-right shrink-0 pl-2">
-                  <div className="font-bold text-amber-300 font-mono text-xs">{formatBRL(t.valor)}</div>
-                  <div className="text-[10px] font-semibold text-emerald-400">
+                  <div className="font-bold text-slate-900 font-mono text-xs">{formatBRL(t.valor)}</div>
+                  <div className="text-[10px] font-semibold text-emerald-600">
                     {t.porcentagem ? t.porcentagem.toFixed(1) : 0}%
                   </div>
                 </div>
@@ -684,28 +677,28 @@ export const QuebrasMovimentacaoView: React.FC = () => {
         </div>
 
         {/* Card 4 (Ao lado do Turno): Lançamentos de Quebras de Movimentação */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col justify-between">
+        <div className="bg-white border border-blue-200/90 rounded-2xl shadow-sm shadow-blue-900/5 overflow-hidden flex flex-col justify-between">
           {/* Table Header */}
-          <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900">
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
             <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-bold text-blue-950 flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-amber-500" />
                 Lançamentos de Quebras ({filteredItems.length})
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Registros com Motivo, Colaborador, Função, Valor da Avaria e HL
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">Linhas:</span>
+              <span className="text-[11px] text-slate-500">Linhas:</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-amber-500 shadow-sm"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -718,55 +711,55 @@ export const QuebrasMovimentacaoView: React.FC = () => {
           {/* Table Container */}
           <div className="overflow-x-auto overflow-y-auto max-h-[320px] flex-1">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="sticky top-0 z-10 bg-slate-950 border-b border-slate-800">
-                <tr className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                  <th onClick={() => handleSort('data_hora')} className="py-2.5 px-3 cursor-pointer hover:text-white">
+              <thead className="sticky top-0 z-10 bg-slate-100 border-b border-slate-200">
+                <tr className="text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                  <th onClick={() => handleSort('data_hora')} className="py-2.5 px-3 cursor-pointer hover:text-slate-900">
                     <div className="flex items-center gap-1">
                       <span>Data / Hora</span>
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th onClick={() => handleSort('mes')} className="py-2.5 px-2 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('mes')} className="py-2.5 px-2 cursor-pointer hover:text-slate-900">
                     Mês
                   </th>
-                  <th onClick={() => handleSort('codigo_produto')} className="py-2.5 px-2 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('codigo_produto')} className="py-2.5 px-2 cursor-pointer hover:text-slate-900">
                     Cód. SKU
                   </th>
-                  <th onClick={() => handleSort('produto')} className="py-2.5 px-3 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('produto')} className="py-2.5 px-3 cursor-pointer hover:text-slate-900">
                     <div className="flex items-center gap-1">
                       <span>Produto</span>
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th onClick={() => handleSort('quantidade')} className="py-2.5 px-2 text-right cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('quantidade')} className="py-2.5 px-2 text-right cursor-pointer hover:text-slate-900">
                     Qtd
                   </th>
-                  <th onClick={() => handleSort('hecto_perdido')} className="py-2.5 px-2 text-right cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('hecto_perdido')} className="py-2.5 px-2 text-right cursor-pointer hover:text-slate-900">
                     HL Perdido
                   </th>
-                  <th onClick={() => handleSort('valor')} className="py-2.5 px-2 text-right cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('valor')} className="py-2.5 px-2 text-right cursor-pointer hover:text-slate-900">
                     Valor (R$)
                   </th>
-                  <th onClick={() => handleSort('motivo')} className="py-2.5 px-3 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('motivo')} className="py-2.5 px-3 cursor-pointer hover:text-slate-900">
                     Motivo
                   </th>
-                  <th onClick={() => handleSort('funcionario')} className="py-2.5 px-3 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('funcionario')} className="py-2.5 px-3 cursor-pointer hover:text-slate-900">
                     Colaborador / Função
                   </th>
-                  <th onClick={() => handleSort('setor')} className="py-2.5 px-2 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('setor')} className="py-2.5 px-2 cursor-pointer hover:text-slate-900">
                     Área
                   </th>
-                  <th onClick={() => handleSort('turno')} className="py-2.5 px-2 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('turno')} className="py-2.5 px-2 cursor-pointer hover:text-slate-900">
                     Turno
                   </th>
-                  <th onClick={() => handleSort('cod_quebra')} className="py-2.5 px-2 cursor-pointer hover:text-white">
+                  <th onClick={() => handleSort('cod_quebra')} className="py-2.5 px-2 cursor-pointer hover:text-slate-900">
                     Cód.
                   </th>
                   <th className="py-2.5 px-2">Obs</th>
                   <th className="py-2.5 px-2 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {paginatedItems.length === 0 ? (
                   <tr>
                     <td colSpan={14} className="py-8 text-center text-slate-500 italic">
@@ -775,78 +768,78 @@ export const QuebrasMovimentacaoView: React.FC = () => {
                   </tr>
                 ) : (
                   paginatedItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       {/* Data/Hora */}
-                      <td className="py-2 px-3 font-mono text-slate-300 whitespace-nowrap">
+                      <td className="py-2 px-3 font-mono text-slate-600 whitespace-nowrap">
                         {formatDataHoraAbreviada(item.data_hora)}
                       </td>
 
                       {/* Mês */}
                       <td className="py-2 px-2 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
                           {item.mes}
                         </span>
                       </td>
 
                       {/* Código SKU */}
-                      <td className="py-2 px-2 font-mono text-slate-400 font-bold whitespace-nowrap">
+                      <td className="py-2 px-2 font-mono text-slate-500 font-bold whitespace-nowrap">
                         {item.codigo_produto}
                       </td>
 
                       {/* Produto */}
-                      <td className="py-2 px-3 font-bold text-white whitespace-nowrap">
+                      <td className="py-2 px-3 font-bold text-slate-900 whitespace-nowrap">
                         {item.produto}
                       </td>
 
                       {/* Quantidade */}
-                      <td className="py-2 px-2 text-right font-mono font-bold text-slate-300 whitespace-nowrap">
+                      <td className="py-2 px-2 text-right font-mono font-bold text-slate-700 whitespace-nowrap">
                         {item.quantidade}
                       </td>
 
                       {/* Hecto Perdido */}
-                      <td className="py-2 px-2 text-right font-mono font-bold text-sky-400 whitespace-nowrap">
+                      <td className="py-2 px-2 text-right font-mono font-bold text-sky-700 whitespace-nowrap">
                         {formatHL(item.hecto_perdido ?? 0)}
                       </td>
 
                       {/* Valor da Avaria R$ */}
-                      <td className="py-2 px-2 text-right font-mono font-bold text-amber-400 whitespace-nowrap">
+                      <td className="py-2 px-2 text-right font-mono font-bold text-amber-600 whitespace-nowrap">
                         {formatBRL(item.valor ?? item.valor_avaria ?? 0)}
                       </td>
 
                       {/* Motivo */}
                       <td className="py-2 px-3 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 text-[10px] font-bold border border-amber-500/20">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
                           {item.motivo || 'FALTA NO PALETE'}
                         </span>
                       </td>
 
                       {/* Colaborador & Função */}
                       <td className="py-2 px-3 whitespace-nowrap">
-                        <div className="font-bold text-slate-200">{item.colaborador || item.funcionario}</div>
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase">{item.funcao || item.cargo}</div>
+                        <div className="font-bold text-slate-900">{item.colaborador || item.funcionario}</div>
+                        <div className="text-[10px] text-slate-500 font-semibold uppercase">{item.funcao || item.cargo}</div>
                       </td>
 
                       {/* Área / Setor */}
                       <td className="py-2 px-2 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 text-[10px] font-semibold border border-emerald-500/20">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
                           {item.area || item.setor}
                         </span>
                       </td>
 
                       {/* Turno */}
                       <td className="py-2 px-2 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 text-[10px] font-semibold border border-purple-500/20">
+                        <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-200">
                           {item.turno}
                         </span>
                       </td>
 
                       {/* Cód Quebra / Filial */}
-                      <td className="py-2 px-2 font-mono text-slate-400 whitespace-nowrap">
+                      <td className="py-2 px-2 font-mono text-slate-500 whitespace-nowrap">
                         {item.cod_quebra ?? item.filial ?? '-'}
                       </td>
 
                       {/* Observação */}
-                      <td className="py-2 px-2 text-slate-400 max-w-[140px] truncate" title={item.observacao}>
+                      <td className="py-2 px-2 text-slate-500 max-w-[140px] truncate" title={item.observacao}>
                         {item.observacao || '-'}
                       </td>
 
@@ -858,14 +851,14 @@ export const QuebrasMovimentacaoView: React.FC = () => {
                               setItemEditando(item);
                               setIsFormModalOpen(true);
                             }}
-                            className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 flex items-center justify-center transition-colors cursor-pointer"
                             title="Editar"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => handleDeleteItem(item.id)}
-                            className="w-6 h-6 rounded bg-slate-800 hover:bg-rose-900/50 text-slate-400 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 flex items-center justify-center transition-colors cursor-pointer"
                             title="Excluir"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -880,13 +873,13 @@ export const QuebrasMovimentacaoView: React.FC = () => {
           </div>
 
           {/* Table Footer & Pagination */}
-          <div className="p-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950/60">
-            <div className="text-[11px] text-slate-400">
-              Mostrando <span className="font-bold text-white">{sortedItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a{' '}
-              <span className="font-bold text-white">
+          <div className="p-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50">
+            <div className="text-[11px] text-slate-500">
+              Mostrando <span className="font-bold text-slate-900">{sortedItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a{' '}
+              <span className="font-bold text-slate-900">
                 {Math.min(currentPage * itemsPerPage, sortedItems.length)}
               </span>{' '}
-              de <span className="font-bold text-white">{sortedItems.length}</span> registros
+              de <span className="font-bold text-slate-900">{sortedItems.length}</span> registros
             </div>
 
             {totalPages > 1 && (
@@ -894,17 +887,17 @@ export const QuebrasMovimentacaoView: React.FC = () => {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] text-slate-300 font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] text-slate-600 font-bold transition-colors cursor-pointer"
                 >
                   Anterior
                 </button>
-                <span className="px-1 text-[11px] font-mono text-slate-400">
+                <span className="px-1 text-[11px] font-mono text-slate-500">
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] text-slate-300 font-bold transition-colors cursor-pointer"
+                  className="px-2 py-1 rounded bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] text-slate-600 font-bold transition-colors cursor-pointer"
                 >
                   Próxima
                 </button>

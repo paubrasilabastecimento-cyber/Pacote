@@ -48,7 +48,15 @@ import {
   Check,
   FolderTree,
   Maximize2,
+  Globe,
+  Link as LinkIcon,
+  Loader2,
+  DownloadCloud,
 } from 'lucide-react';
+import {
+  fetchDataFromGitHubOrUrl,
+  isWebOrGitHubUrl,
+} from '../utils/githubUrlFetcher';
 
 export const PerdasPorView: React.FC = () => {
   // Main data state with persistent cache initialization
@@ -120,7 +128,10 @@ export const PerdasPorView: React.FC = () => {
 
   // Modals / Overlays
   const [showImportJsonModal, setShowImportJsonModal] = useState<boolean>(false);
-  const [importJsonTab, setImportJsonTab] = useState<'file' | 'text'>('file');
+  const [importJsonTab, setImportJsonTab] = useState<'github' | 'file' | 'text'>('github');
+  const [githubUrlInput, setGithubUrlInput] = useState<string>('');
+  const [isLoadingGithub, setIsLoadingGithub] = useState<boolean>(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
   const [jsonPastedCode, setJsonPastedCode] = useState<string>('');
   const [jsonParseError, setJsonParseError] = useState<string | null>(null);
   const [showJsonModal, setShowJsonModal] = useState<boolean>(false);
@@ -135,6 +146,45 @@ export const PerdasPorView: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
+
+  // GitHub URL Fetch Handler
+  const handleFetchGitHubPerdas = async (urlToFetch?: string) => {
+    const targetUrl = (urlToFetch || githubUrlInput).trim();
+    if (!targetUrl) {
+      setGithubError('Informe o link do arquivo no GitHub ou URL web.');
+      return;
+    }
+
+    setIsLoadingGithub(true);
+    setGithubError(null);
+
+    const result = await fetchDataFromGitHubOrUrl(targetUrl);
+    setIsLoadingGithub(false);
+
+    if (!result.success) {
+      setGithubError(result.error || 'Erro ao carregar dados do link.');
+      return;
+    }
+
+    try {
+      const parsedItems = parseJsonText(result.rawText);
+      if (parsedItems.length === 0) {
+        setGithubError('O arquivo do link foi baixado, mas não contém registros válidos de perdas.');
+        return;
+      }
+
+      persistDataItems(parsedItems);
+      setShowImportJsonModal(false);
+      setGithubUrlInput('');
+      setUploadStatus({
+        message: `Arquivo baixado do GitHub com sucesso! ${parsedItems.length} registros importados.`,
+        type: 'success',
+      });
+      setTimeout(() => setUploadStatus({ message: '', type: null }), 5000);
+    } catch (err: any) {
+      setGithubError('Erro ao processar dados do arquivo: ' + (err?.message || 'Formato JSON inválido'));
+    }
+  };
 
   // Analytics computation
   const { stats, mesesSummary, topProdutos, embalagensSummary } = useMemo(() => {
@@ -1000,6 +1050,22 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
             <div className="flex border-b border-slate-800 bg-slate-950/60 px-4 pt-2 gap-2">
               <button
                 onClick={() => {
+                  setImportJsonTab('github');
+                  setJsonParseError(null);
+                  setGithubError(null);
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+                  importJsonTab === 'github'
+                    ? 'bg-slate-900 text-sky-400 border-sky-400'
+                    : 'text-slate-400 hover:text-slate-200 border-transparent'
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                <span>Link do GitHub / Web</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono">Recomendado</span>
+              </button>
+              <button
+                onClick={() => {
                   setImportJsonTab('file');
                   setJsonParseError(null);
                 }}
@@ -1030,7 +1096,80 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
 
             {/* Content Body */}
             <div className="p-5 overflow-y-auto flex-1 space-y-4 custom-scrollbar text-xs">
-              {importJsonTab === 'file' ? (
+              {/* 1. GITHUB / WEB TAB */}
+              {importJsonTab === 'github' && (
+                <div className="space-y-4">
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-white flex items-center gap-2 mb-1">
+                        <Globe className="w-4 h-4 text-sky-400" />
+                        Cole o Link do GitHub (Repositório, Arquivo ou Raw):
+                      </label>
+                      <p className="text-[11px] text-slate-400">
+                        Insira a URL do arquivo no GitHub (ex: <code className="text-sky-300 font-mono">github.com/.../blob/main/perdas.json</code>). O sistema converte automaticamente para download raw.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                      <div className="relative flex-1">
+                        <LinkIcon className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="url"
+                          placeholder="https://github.com/usuario/repo/blob/main/perdas.json ou raw.githubusercontent.com/..."
+                          value={githubUrlInput}
+                          onChange={(e) => {
+                            setGithubUrlInput(e.target.value);
+                            setGithubError(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleFetchGitHubPerdas();
+                            }
+                          }}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isLoadingGithub || !githubUrlInput.trim()}
+                        onClick={() => handleFetchGitHubPerdas()}
+                        className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-sky-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        {isLoadingGithub ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Puxando Dados...</span>
+                          </>
+                        ) : (
+                          <>
+                            <DownloadCloud className="w-4 h-4" />
+                            <span>Puxar do GitHub</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {githubError && (
+                      <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3 rounded-xl text-xs space-y-1.5">
+                        <div className="flex items-center gap-2 font-bold text-rose-400">
+                          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                          <span>Aviso de Carregamento:</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed">{githubError}</p>
+                        <div className="text-[10px] text-rose-300/80 bg-rose-950/40 p-2 rounded-lg mt-1 space-y-0.5">
+                          <p className="font-semibold">💡 Dicas para links do GitHub:</p>
+                          <p>• Certifique-se de que o repositório no GitHub é <strong>Público</strong>.</p>
+                          <p>• Se o repositório for privado, copie o conteúdo e use a aba <strong>"Colar Código JSON"</strong>.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. FILE TAB */}
+              {importJsonTab === 'file' && (
                 <div className="space-y-4">
                   <div
                     onClick={() => jsonFileInputRef.current?.click()}
@@ -1092,7 +1231,10 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
                     </p>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {/* 3. TEXT TAB */}
+              {importJsonTab === 'text' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-300 font-semibold">
@@ -1170,6 +1312,25 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
                     </div>
                   </div>
 
+                  {/* Banner if user pasted URL */}
+                  {isWebOrGitHubUrl(jsonPastedCode.trim()) && (
+                    <div className="bg-sky-500/10 border border-sky-500/30 p-3 rounded-xl flex items-center justify-between gap-3 text-xs text-sky-300">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                        <span>Detectamos um link web/GitHub colado! Deseja puxar os dados deste arquivo?</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleFetchGitHubPerdas(jsonPastedCode.trim())}
+                        disabled={isLoadingGithub}
+                        className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-lg cursor-pointer flex items-center gap-1 text-[11px] flex-shrink-0 shadow"
+                      >
+                        {isLoadingGithub ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5" />}
+                        Puxar do GitHub
+                      </button>
+                    </div>
+                  )}
+
                   <textarea
                     value={jsonPastedCode}
                     onChange={(e) => {
@@ -1177,7 +1338,7 @@ ACHADOS E ANOMALIAS PRINCIPAIS:
                       if (jsonParseError) setJsonParseError(null);
                     }}
                     placeholder={`[\n  {\n    "dataOperacao": "2026-02-07",\n    "emissao": "2026-02-09",\n    "produto": 9068,\n    "unidade": "Un",\n    "descricao": "SKOL LATA 350ML SH C/",\n    "qtde": 4,\n    "valor": 9.51,\n    "embalagem": "LATA 355ML"\n  }\n]`}
-                    rows={12}
+                    rows={10}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 font-mono text-xs text-emerald-400 focus:outline-none focus:border-sky-500 placeholder:text-slate-600 custom-scrollbar resize-y"
                   />
 

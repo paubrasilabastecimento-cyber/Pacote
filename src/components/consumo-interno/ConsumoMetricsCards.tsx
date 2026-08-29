@@ -133,39 +133,37 @@ export const ConsumoMetricsCards: React.FC<ConsumoMetricsCardsProps> = ({ metric
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* 1. TOTAL GASTO CONSUMO (Mantido conforme solicitado) */}
+      {/* 1. TOTAL GASTO CONSUMO */}
       <div
         id="card-consumo-total-gasto"
-        className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4.5 shadow-xl relative overflow-hidden group hover:border-amber-500/40 transition-all flex flex-col justify-between"
+        className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group flex flex-col justify-between"
       >
         <div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Total Gasto Consumo
             </span>
-            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5">
-            <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
-              {formatCurrency(metrics.totalGasto)}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 font-medium">
-              <span>Ticket Médio / Linha:</span>
-              <span className="font-mono font-bold text-amber-300">
-                {formatCurrency(ticketMedioPorLinha)}
-              </span>
-            </div>
+          <div className="text-base sm:text-lg font-black text-blue-950 font-mono tracking-tight">
+            {formatCurrency(metrics.totalGasto)}
+          </div>
+          <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
+            <span>Ticket Médio:</span>
+            <span className="font-mono font-bold text-amber-700">
+              {formatCurrency(ticketMedioPorLinha)}
+            </span>
           </div>
         </div>
 
-        <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-          <span className="text-emerald-400 font-semibold flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" />
+        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+          <span className="text-emerald-700 font-semibold flex items-center gap-1">
+            <TrendingUp className="w-3 h-3" />
             100% interno
           </span>
-          <span className="font-mono text-slate-300">
+          <span className="font-mono text-slate-600 font-medium">
             {metrics.numRegistros} itens • {metrics.unidadesTotais} un
           </span>
         </div>
@@ -174,36 +172,34 @@ export const ConsumoMetricsCards: React.FC<ConsumoMetricsCardsProps> = ({ metric
       {/* 2. CATEGORIA DOMINANTE */}
       <div
         id="card-consumo-categoria-dominante"
-        className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4.5 shadow-xl relative overflow-hidden group hover:border-sky-500/40 transition-all flex flex-col justify-between"
+        className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group flex flex-col justify-between"
       >
         <div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Categoria Principal
             </span>
-            <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <FolderTree className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5">
-            <div
-              className="text-2xl sm:text-3xl font-black text-sky-400 truncate"
-              title={analytics.categoriaDominante.nome}
-            >
-              {analytics.categoriaDominante.nome}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 font-medium">
-              <span>Gasto na Categoria:</span>
-              <span className="font-mono font-bold text-slate-200">
-                {formatCurrency(analytics.categoriaDominante.valor)}
-              </span>
-            </div>
+          <div
+            className="text-sm sm:text-base font-black text-sky-700 truncate"
+            title={analytics.categoriaDominante.nome}
+          >
+            {analytics.categoriaDominante.nome}
+          </div>
+          <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
+            <span>Gasto:</span>
+            <span className="font-mono font-bold text-slate-800">
+              {formatCurrency(analytics.categoriaDominante.valor)}
+            </span>
           </div>
         </div>
 
-        <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
           <span>Participação:</span>
-          <span className="font-mono text-sky-400 font-bold">
+          <span className="font-mono text-sky-700 font-bold">
             {analytics.categoriaDominante.percentual.toFixed(1)}% do total
           </span>
         </div>
@@ -212,40 +208,37 @@ export const ConsumoMetricsCards: React.FC<ConsumoMetricsCardsProps> = ({ metric
       {/* 3. MÊS MAIS CRÍTICO / PICO */}
       <div
         id="card-consumo-mes-critico"
-        className="bg-slate-900/90 border border-rose-900/40 rounded-2xl p-4.5 shadow-xl relative overflow-hidden group hover:border-rose-500/60 transition-all flex flex-col justify-between"
+        className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group flex flex-col justify-between"
       >
         <div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-300 uppercase tracking-wider flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block mr-0.5" />
-              Mês Mais Crítico
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              Mês de Pico
             </span>
-            <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Calendar className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5">
-            <div
-              className="text-2xl sm:text-3xl font-black text-rose-400 truncate"
-              title={analytics.mesCritico.nome}
-            >
-              {analytics.mesCritico.nome}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 font-medium">
-              <span>Gasto no Mês:</span>
-              <span className="font-mono font-bold text-slate-200">
-                {formatCurrency(analytics.mesCritico.valor)}
-              </span>
-            </div>
+          <div
+            className="text-sm sm:text-base font-black text-rose-700 truncate"
+            title={analytics.mesCritico.nome}
+          >
+            {analytics.mesCritico.nome}
+          </div>
+          <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
+            <span>Gasto no Mês:</span>
+            <span className="font-mono font-bold text-slate-800">
+              {formatCurrency(analytics.mesCritico.valor)}
+            </span>
           </div>
         </div>
 
-        <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-          <span className="text-rose-400/90 font-medium flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3 text-rose-400" />
+        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+          <span className="text-rose-600 font-medium flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3 text-rose-500" />
             Pico de Consumo
           </span>
-          <span className="font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+          <span className="font-mono px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
             {analytics.mesCritico.percentual.toFixed(1)}% do total
           </span>
         </div>
@@ -254,38 +247,36 @@ export const ConsumoMetricsCards: React.FC<ConsumoMetricsCardsProps> = ({ metric
       {/* 4. PRODUTO MAIS CONSUMIDO / TOP SKU */}
       <div
         id="card-consumo-top-produto"
-        className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4.5 shadow-xl relative overflow-hidden group hover:border-emerald-500/40 transition-all flex flex-col justify-between"
+        className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group flex flex-col justify-between"
       >
         <div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Produto Mais Consumido
             </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Tag className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2.5">
-            <div
-              className="text-lg sm:text-xl font-black text-emerald-400 truncate leading-tight mt-0.5"
-              title={analytics.topProduto.descricao}
-            >
-              {analytics.topProduto.descricao}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 font-medium">
-              <span>Valor Total:</span>
-              <span className="font-mono font-bold text-slate-200">
-                {formatCurrency(analytics.topProduto.valor)}
-              </span>
-            </div>
+          <div
+            className="text-xs sm:text-sm font-black text-emerald-700 truncate"
+            title={analytics.topProduto.descricao}
+          >
+            {analytics.topProduto.descricao}
+          </div>
+          <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
+            <span>Valor Total:</span>
+            <span className="font-mono font-bold text-slate-800">
+              {formatCurrency(analytics.topProduto.valor)}
+            </span>
           </div>
         </div>
 
-        <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-          <span className="font-mono text-slate-400">
-            {analytics.topProduto.qtde} un requisitadas
+        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+          <span className="font-mono text-slate-600 font-medium">
+            {analytics.topProduto.qtde} un
           </span>
-          <span className="font-mono text-emerald-400 font-bold">
+          <span className="font-mono text-emerald-700 font-bold">
             {analytics.topProduto.percentual.toFixed(1)}% do total
           </span>
         </div>

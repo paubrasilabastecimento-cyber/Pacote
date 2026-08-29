@@ -38,7 +38,15 @@ import {
   ChevronUp,
   ShieldAlert,
   Droplet,
+  Globe,
+  Link as LinkIcon,
+  Loader2,
+  DownloadCloud,
 } from 'lucide-react';
+import {
+  fetchDataFromGitHubOrUrl,
+  isWebOrGitHubUrl,
+} from '../utils/githubUrlFetcher';
 import {
   ResponsiveContainer,
   BarChart,
@@ -173,8 +181,53 @@ export const ReposicaoView: React.FC = () => {
   const [editItem, setEditItem] = useState<ItemReposicao | null>(null);
   const [textoColado, setTextoColado] = useState<string>('');
   const [jsonColado, setJsonColado] = useState<string>('');
+  const [jsonModalTab, setJsonModalTab] = useState<'github' | 'file' | 'text'>('github');
+  const [githubUrlInput, setGithubUrlInput] = useState<string>('');
+  const [isLoadingGithub, setIsLoadingGithub] = useState<boolean>(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<{ tipo: 'sucesso' | 'erro' | null; msg: string }>({ tipo: null, msg: '' });
   const [jsonImportStatus, setJsonImportStatus] = useState<{ tipo: 'sucesso' | 'erro' | null; msg: string }>({ tipo: null, msg: '' });
+
+  // GitHub URL Fetch Handler
+  const handleFetchGitHubReposicao = async (urlToFetch?: string) => {
+    const targetUrl = (urlToFetch || githubUrlInput).trim();
+    if (!targetUrl) {
+      setGithubError('Informe o link do arquivo no GitHub ou URL web.');
+      return;
+    }
+
+    setIsLoadingGithub(true);
+    setGithubError(null);
+
+    const result = await fetchDataFromGitHubOrUrl(targetUrl);
+    setIsLoadingGithub(false);
+
+    if (!result.success) {
+      setGithubError(result.error || 'Erro ao carregar dados do link.');
+      return;
+    }
+
+    try {
+      const itensProcessados = sanitizarEParsearValesJSON(result.rawText);
+      if (itensProcessados.length === 0) {
+        setGithubError('O arquivo do link foi baixado, mas não contém registros válidos de reposição/vales.');
+        return;
+      }
+
+      persistData(itensProcessados);
+      setJsonImportStatus({
+        tipo: 'sucesso',
+        msg: `${itensProcessados.length} vale(s) importado(s) do GitHub com sucesso!`,
+      });
+      setGithubUrlInput('');
+      setTimeout(() => {
+        setIsJsonModalOpen(false);
+        setJsonImportStatus({ tipo: null, msg: '' });
+      }, 1200);
+    } catch (err: any) {
+      setGithubError('Erro ao validar dados JSON: ' + (err?.message || 'Formato inválido'));
+    }
+  };
 
   // Formulário de Novo/Edição
   const [formNovo, setFormNovo] = useState<{
@@ -1621,7 +1674,7 @@ export const ReposicaoView: React.FC = () => {
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Carregue arquivo .json ou cole o objeto/array conforme o esquema especificado
+                    Puxe diretamente do GitHub, carregue arquivo ou cole o código JSON
                   </p>
                 </div>
               </div>
@@ -1629,10 +1682,55 @@ export const ReposicaoView: React.FC = () => {
                 onClick={() => {
                   setIsJsonModalOpen(false);
                   setJsonImportStatus({ tipo: null, msg: '' });
+                  setGithubError(null);
                 }}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tab Selector */}
+            <div className="flex border-b border-slate-800 bg-slate-950/60 -mx-6 -mt-4 px-6 pt-2 gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setJsonModalTab('github');
+                  setGithubError(null);
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+                  jsonModalTab === 'github'
+                    ? 'bg-slate-900 text-amber-400 border-amber-400'
+                    : 'text-slate-400 hover:text-slate-200 border-transparent'
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                <span>Link do GitHub / Web</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">Recomendado</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setJsonModalTab('file')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+                  jsonModalTab === 'file'
+                    ? 'bg-slate-900 text-amber-400 border-amber-400'
+                    : 'text-slate-400 hover:text-slate-200 border-transparent'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span>Arquivo .JSON</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setJsonModalTab('text')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+                  jsonModalTab === 'text'
+                    ? 'bg-slate-900 text-amber-400 border-amber-400'
+                    : 'text-slate-400 hover:text-slate-200 border-transparent'
+                }`}
+              >
+                <Code2 className="w-4 h-4" />
+                <span>Colar Código</span>
               </button>
             </div>
 
@@ -1654,85 +1752,174 @@ export const ReposicaoView: React.FC = () => {
               </div>
             )}
 
-            {/* Exemplo de Formato Aceito com Botão de Auto-Preenchimento */}
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 mb-4 text-xs">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold text-amber-400 flex items-center gap-1.5">
-                  <Code2 className="w-4 h-4" />
-                  <span>Modelo JSON Oficial Requerido:</span>
+            {/* TAB 1: GITHUB */}
+            {jsonModalTab === 'github' && (
+              <div className="space-y-4">
+                <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-white flex items-center gap-2 mb-1">
+                      <Globe className="w-4 h-4 text-amber-400" />
+                      Cole o Link do GitHub (Repositório, Arquivo ou Raw):
+                    </label>
+                    <p className="text-[11px] text-slate-400">
+                      Insira a URL do arquivo no GitHub (ex: <code className="text-amber-300 font-mono">github.com/.../blob/main/reposicao.json</code>). O sistema converte automaticamente para raw.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <div className="relative flex-1">
+                      <LinkIcon className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="url"
+                        placeholder="https://github.com/usuario/repo/blob/main/reposicao.json"
+                        value={githubUrlInput}
+                        onChange={(e) => {
+                          setGithubUrlInput(e.target.value);
+                          setGithubError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleFetchGitHubReposicao();
+                          }
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none font-mono"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isLoadingGithub || !githubUrlInput.trim()}
+                      onClick={() => handleFetchGitHubReposicao()}
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    >
+                      {isLoadingGithub ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Puxando Dados...</span>
+                        </>
+                      ) : (
+                        <>
+                          <DownloadCloud className="w-4 h-4" />
+                          <span>Puxar do GitHub</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {githubError && (
+                    <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3 rounded-xl text-xs space-y-1.5">
+                      <div className="flex items-center gap-2 font-bold text-rose-400">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                        <span>Aviso de Carregamento:</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">{githubError}</p>
+                      <div className="text-[10px] text-rose-300/80 bg-rose-950/40 p-2 rounded-lg mt-1 space-y-0.5">
+                        <p className="font-semibold">💡 Dicas para links do GitHub:</p>
+                        <p>• Certifique-se de que o repositório no GitHub é <strong>Público</strong>.</p>
+                        <p>• Se o repositório for privado, copie o conteúdo e use a aba <strong>"Colar Código"</strong>.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJsonColado(EXEMPLO_JSON_OFICIAL);
-                  }}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline cursor-pointer font-bold"
+              </div>
+            )}
+
+            {/* TAB 2: ARQUIVO */}
+            {jsonModalTab === 'file' && (
+              <div className="space-y-4">
+                <div
+                  onClick={() => jsonFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/40 hover:bg-amber-500/5 rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
                 >
-                  <Copy className="w-3 h-3" />
-                  <span>Preencher Exemplo Oficial</span>
-                </button>
+                  <input
+                    ref={jsonFileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleJsonUpload}
+                    className="hidden"
+                  />
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div className="text-sm font-semibold text-white">
+                    Clique ou arraste um arquivo .JSON aqui
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Importa automaticamente todos os registros do arquivo
+                  </div>
+                </div>
               </div>
+            )}
 
-              <pre className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono text-[11px] overflow-x-auto leading-tight custom-scrollbar max-h-36">
+            {/* TAB 3: TEXTO */}
+            {jsonModalTab === 'text' && (
+              <div className="space-y-4">
+                {/* Exemplo de Formato Aceito com Botão de Auto-Preenchimento */}
+                <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 text-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold text-amber-400 flex items-center gap-1.5">
+                      <Code2 className="w-4 h-4" />
+                      <span>Modelo JSON Oficial Requerido:</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setJsonColado(EXEMPLO_JSON_OFICIAL);
+                      }}
+                      className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline cursor-pointer font-bold"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Preencher Exemplo Oficial</span>
+                    </button>
+                  </div>
+
+                  <pre className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono text-[11px] overflow-x-auto leading-tight custom-scrollbar max-h-28">
 {EXEMPLO_JSON_OFICIAL}
-              </pre>
-            </div>
+                  </pre>
+                </div>
 
-            {/* Upload de Arquivo JSON */}
-            <div className="space-y-4">
-              <div
-                onClick={() => jsonFileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/40 hover:bg-amber-500/5 rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5"
-              >
-                <input
-                  ref={jsonFileInputRef}
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleJsonUpload}
-                  className="hidden"
-                />
-                <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <div className="text-xs sm:text-sm font-semibold text-white">
-                  Clique ou arraste um arquivo .JSON aqui
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Importa automaticamente todos os registros do arquivo
+                {/* Banner if user pasted URL */}
+                {isWebOrGitHubUrl(jsonColado.trim()) && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-300">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                      <span>Detectamos um link web/GitHub colado! Deseja puxar os dados deste arquivo?</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleFetchGitHubReposicao(jsonColado.trim())}
+                      disabled={isLoadingGithub}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg cursor-pointer flex items-center gap-1 text-[11px] flex-shrink-0 shadow"
+                    >
+                      {isLoadingGithub ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5" />}
+                      Puxar do GitHub
+                    </button>
+                  </div>
+                )}
+
+                {/* Área de Colar JSON */}
+                <div>
+                  <textarea
+                    value={jsonColado}
+                    onChange={(e) => setJsonColado(e.target.value)}
+                    placeholder={`Cole aqui o JSON de Reposição no formato:\n{\n  "item_numero": 1,\n  "data_emissao": "14/01/2026",\n  "nota_fiscal": "252161",\n  "mapa_carga": "M1055",\n  "rota_setor": "R111",\n  "motorista": "DANILLO PEREIRA DOS SANTOS SILVA",\n  "valor_total_prejuizo": 57.04,\n  "volume_total_hl": 0.08,\n  "detalhamento_skus": "9068 - SKOL LATA 350ML SH C/12 NPAL (2 CX)"\n}`}
+                    rows={6}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500 placeholder:text-slate-600 custom-scrollbar"
+                  />
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400">
+                      Suporta objeto único <code>{`{...}`}</code> ou lista <code>{`[{...}, {...}]`}</code>
+                    </span>
+                    <button
+                      onClick={handleProcessarJsonColado}
+                      className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+                    >
+                      Importar Dados JSON
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              {/* Divisor */}
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-800" />
-                <span className="flex-shrink mx-4 text-[11px] text-slate-500 uppercase font-semibold">
-                  ou cole a estrutura JSON abaixo
-                </span>
-                <div className="flex-grow border-t border-slate-800" />
-              </div>
-
-              {/* Área de Colar JSON */}
-              <div>
-                <textarea
-                  value={jsonColado}
-                  onChange={(e) => setJsonColado(e.target.value)}
-                  placeholder={`Cole aqui o JSON de Reposição no formato:\n{\n  "item_numero": 1,\n  "data_emissao": "14/01/2026",\n  "nota_fiscal": "252161",\n  "mapa_carga": "M1055",\n  "rota_setor": "R111",\n  "motorista": "DANILLO PEREIRA DOS SANTOS SILVA",\n  "valor_total_prejuizo": 57.04,\n  "volume_total_hl": 0.08,\n  "detalhamento_skus": "9068 - SKOL LATA 350ML SH C/12 NPAL (2 CX)"\n}`}
-                  rows={6}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500 placeholder:text-slate-600 custom-scrollbar"
-                />
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">
-                    Suporta objeto único <code>{`{...}`}</code> ou lista <code>{`[{...}, {...}]`}</code>
-                  </span>
-                  <button
-                    onClick={handleProcessarJsonColado}
-                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md shadow-amber-500/20 cursor-pointer"
-                  >
-                    Importar Dados JSON
-                  </button>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}

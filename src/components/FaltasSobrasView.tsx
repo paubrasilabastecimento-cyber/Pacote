@@ -39,12 +39,14 @@ import {
 } from '../data/mockFaltasSobras';
 import { gerarHtmlAutocontido } from '../utils/faltasSobrasHtmlGenerator';
 import { ModalImportacaoFaltasSobras } from './ModalImportacaoFaltasSobras';
+import { TabHeaderBanner } from './common/TabHeaderBanner';
+import { PALETA_AMBEV, CORES_GRAFICOS_AMBEV } from '../utils/themeStyles';
 
 const CORES = {
-  amber: '#f59e0b',
+  amber: PALETA_AMBEV.ambar,
   faltaRed: '#ef4444',
-  sobraGreen: '#22c55e',
-  neutralBlue: '#3b82f6',
+  sobraGreen: '#10b981',
+  neutralBlue: PALETA_AMBEV.azul,
   slate900: '#0f172a',
   slate800: '#1e293b',
   slate400: '#94a3b8',
@@ -181,146 +183,137 @@ export const FaltasSobrasView: React.FC = () => {
   const acuracidadePct = data.total_itens > 0 ? ((data.itens_ok / data.total_itens) * 100).toFixed(1) : '0.0';
 
   return (
-    <div id="view-faltas-sobras" className="space-y-6 animate-fadeIn pb-16">
+    <div id="view-faltas-sobras" className="space-y-6 animate-fadeIn pb-16 text-slate-900">
       {/* 1. Header Executivo */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+      <TabHeaderBanner
+        categoryBadge="MÓDULO 3 • AUDITORIA DE ESTOQUE"
+        categoryIcon={<Scale className="w-3.5 h-3.5 text-amber-400" />}
+        title="DASHBOARD DE FALTAS & SOBRAS — PRODUTO ACABADO"
+        description={
+          <span>
+            Inventário físico vs disponível • {data.unidade || 'CDD AMBEV'} •{' '}
+            <strong className="text-amber-300 font-bold">{data.total_itens || 0} SKUs auditados</strong> — Estoque Total:{' '}
+            <strong className="text-white font-bold">{formatBRL(data.total_estoque)}</strong>
+          </span>
+        }
+        rightContent={
+          <>
+            <div className="bg-amber-400/20 border border-amber-400/40 text-amber-300 px-3 py-2 rounded-xl text-xs font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs">
+              <Calendar className="w-3.5 h-3.5" />
+              {data.periodo || 'MARÇO 2026'}
+            </div>
 
-        <div className="space-y-1.5 relative z-10">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5 shadow-xs">
-              <Scale className="w-3.5 h-3.5" />
-              Inventário de Produto Acabado
-            </span>
-            <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center gap-1.5">
-              <Boxes className="w-3.5 h-3.5" />
-              Físico vs Disponível
-            </span>
-          </div>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+              title="Importar e alimentar dados de Faltas & Sobras"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Alimentar Faltas &amp; Sobras</span>
+            </button>
 
-          <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            Dashboard de Faltas &amp; Sobras — Estoque de Produto Acabado
-          </h1>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-medium pt-0.5">
-            <span className="flex items-center gap-1 text-slate-300">
-              <Building2 className="w-3.5 h-3.5 text-amber-400" />
-              {data.unidade || 'CDD AMBEV'}
-            </span>
-            <span>•</span>
-            <span className="text-slate-300 font-mono font-bold">{data.total_itens || 0}</span> itens auditados
-            <span>•</span>
-            <span>Estoque Total: <strong className="text-amber-400 font-mono font-bold">{formatBRL(data.total_estoque)}</strong></span>
-          </div>
-        </div>
-
-        {/* Action Controls & Badge */}
-        <div className="flex flex-wrap items-center gap-2.5 relative z-10 shrink-0">
-          <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3 py-2 rounded-xl text-xs font-black tracking-wider uppercase flex items-center gap-1.5 shadow-xs">
-            <Calendar className="w-3.5 h-3.5" />
-            {data.periodo || 'MARÇO 2026'}
-          </div>
-
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 cursor-pointer"
-            title="Importar e alimentar dados de Faltas & Sobras"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Alimentar Faltas &amp; Sobras
-          </button>
-
-          <button
-            onClick={handleDownloadHtml}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-            title="Exportar como arquivo HTML independente"
-          >
-            <Download className="w-3.5 h-3.5 text-amber-400" />
-            Baixar HTML Single-File
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={handleDownloadHtml}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="Exportar como arquivo HTML independente"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Baixar HTML Single-File</span>
+            </button>
+          </>
+        }
+      />
 
       {/* 2. Grid de 5 Cards de KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Estoque Total */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg relative overflow-hidden border-l-4 border-l-amber-500">
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Valor do Estoque</span>
-            <Boxes className="w-4 h-4 text-amber-400" />
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Valor do Estoque</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Boxes className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-black text-white font-mono tracking-tight">
+          <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight truncate">
             {formatBRL(data.total_estoque)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-            <span className="font-semibold text-slate-300">{data.total_itens}</span> SKUs inventariados
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+            <span className="font-semibold text-slate-700">{data.total_itens}</span> SKUs inventariados
           </div>
         </div>
 
         {/* Card 2: Diferença Líquida */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg relative overflow-hidden border-l-4 border-l-amber-400">
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Diferença Líquida</span>
-            <Scale className="w-4 h-4 text-amber-400" />
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Diferença Líquida</span>
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Scale className="w-4 h-4" />
+            </div>
           </div>
           <div
-            className={`text-xl font-black font-mono tracking-tight ${
-              data.total_diferenca < 0 ? 'text-red-400' : 'text-emerald-400'
+            className={`text-base sm:text-lg font-black font-mono tracking-tight ${
+              data.total_diferenca < 0 ? 'text-rose-600' : 'text-emerald-600'
             }`}
           >
             {formatBRL(data.total_diferenca)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className="text-[10px] text-slate-500 mt-1">
             {data.total_diferenca < 0 ? 'Déficit no inventário' : 'Superávit no inventário'}
           </div>
         </div>
 
         {/* Card 3: Faltas Totais */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg relative overflow-hidden border-l-4 border-l-red-500">
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-red-400/90">Faltas Totais (R$)</span>
-            <TrendingDown className="w-4 h-4 text-red-400" />
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Faltas Totais</span>
+            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <TrendingDown className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-black text-red-400 font-mono tracking-tight">
+          <div className="text-base sm:text-lg font-black text-rose-600 font-mono tracking-tight truncate">
             {formatBRL(data.valor_falta)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
             <span>{data.itens_falta} produtos</span>
-            <span className="text-red-400/80 font-mono text-[10px]">
-              {data.total_estoque > 0 ? ((Math.abs(data.valor_falta) / data.total_estoque) * 100).toFixed(2) : '0.00'}% do estoque
+            <span className="text-rose-600 font-mono text-[10px] font-semibold">
+              {data.total_estoque > 0 ? ((Math.abs(data.valor_falta) / data.total_estoque) * 100).toFixed(2) : '0.00'}%
             </span>
           </div>
         </div>
 
         {/* Card 4: Sobras Totais */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg relative overflow-hidden border-l-4 border-l-emerald-500">
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400/90">Sobras Totais (R$)</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Sobras Totais</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-black text-emerald-400 font-mono tracking-tight">
+          <div className="text-base sm:text-lg font-black text-emerald-600 font-mono tracking-tight truncate">
             +{formatBRL(data.valor_sobra)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
             <span>{data.itens_sobra} produtos</span>
-            <span className="text-emerald-400/80 font-mono text-[10px]">
-              {data.total_estoque > 0 ? ((Math.abs(data.valor_sobra) / data.total_estoque) * 100).toFixed(2) : '0.00'}% do estoque
+            <span className="text-emerald-600 font-mono text-[10px] font-semibold">
+              {data.total_estoque > 0 ? ((Math.abs(data.valor_sobra) / data.total_estoque) * 100).toFixed(2) : '0.00'}%
             </span>
           </div>
         </div>
 
         {/* Card 5: Acuracidade de Itens */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg relative overflow-hidden border-l-4 border-l-blue-500">
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400/90">Acuracidade SKUs</span>
-            <CheckCircle2 className="w-4 h-4 text-blue-400" />
+        <div className="bg-white border border-blue-200/90 hover:border-blue-500 rounded-2xl p-4 transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-900/5 hover:-translate-y-0.5 group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Acuracidade SKUs</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-xl font-black text-blue-400 font-mono tracking-tight">
+          <div className="text-base sm:text-lg font-black text-blue-950 font-mono tracking-tight">
             {acuracidadePct}%
           </div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
             <span>{data.itens_ok} de {data.total_itens} OK</span>
-            <span className="text-[10px] text-slate-400 font-mono">100% batimento</span>
+            <span className="text-[10px] text-emerald-600 font-bold">100% batimento</span>
           </div>
         </div>
       </div>
@@ -328,42 +321,44 @@ export const FaltasSobrasView: React.FC = () => {
       {/* 3. Seção Visual: Gráficos de Análise de Faltas e Sobras */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Gráfico 1: Comparativo Falta vs Sobra (R$) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-extrabold text-blue-950 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-amber-500" />
                 Impacto Financeiro Bruto (R$)
               </h2>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 Faltas vs Sobras
               </span>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-slate-500 mb-4">
               Comparativo em valor monetário absoluto apurado no inventário físico
             </p>
 
             <div className="h-52 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dadosFaltaVsSobra} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                  <XAxis dataKey="categoria" stroke="#64748b" fontSize={11} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="categoria" stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <YAxis
-                    stroke="#64748b"
+                    stroke="#94a3b8"
                     fontSize={10}
                     tickLine={false}
                     tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.04)' }}
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#cbd5e1',
                       borderRadius: '12px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       fontSize: '12px',
                     }}
                     formatter={(value: any) => [formatBRL(Number(value)), 'Valor']}
                   />
-                  <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
+                  <Bar dataKey="valor" radius={[6, 6, 0, 0]}>
                     {dadosFaltaVsSobra.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -373,31 +368,31 @@ export const FaltasSobrasView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-800 text-xs">
-            <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
-              <div className="text-[10px] text-red-400 uppercase font-bold">Faltas</div>
-              <div className="text-sm font-mono font-bold text-red-400">{formatBRL(data.valor_falta)}</div>
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 text-xs">
+            <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-center">
+              <div className="text-[10px] text-rose-600 uppercase font-bold">Faltas</div>
+              <div className="text-sm font-mono font-bold text-rose-700">{formatBRL(data.valor_falta)}</div>
             </div>
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-              <div className="text-[10px] text-emerald-400 uppercase font-bold">Sobras</div>
-              <div className="text-sm font-mono font-bold text-emerald-400">+{formatBRL(data.valor_sobra)}</div>
+            <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+              <div className="text-[10px] text-emerald-600 uppercase font-bold">Sobras</div>
+              <div className="text-sm font-mono font-bold text-emerald-700">+{formatBRL(data.valor_sobra)}</div>
             </div>
           </div>
         </div>
 
         {/* Gráfico 2: Divergência por Grupo de Produto (R$) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-extrabold text-blue-950 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-amber-500" />
                 Diferença Líquida por Grupo
               </h2>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 Posição Líquida
               </span>
             </div>
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs text-slate-500 mb-3">
               Saldo financeiro (R$) acumulado por categoria de embalagem
             </p>
 
@@ -407,18 +402,18 @@ export const FaltasSobrasView: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition-colors"
+                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between hover:border-slate-300 transition-colors"
                   >
                     <div className="space-y-0.5">
-                      <div className="text-xs font-bold text-slate-200">{g.grupo}</div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-xs font-bold text-slate-800">{g.grupo}</div>
+                      <div className="text-[10px] text-slate-500">
                         {g.itens} SKUs • Estoque: {formatBRL(g.valor_estoque)}
                       </div>
                     </div>
                     <div className="text-right">
                       <div
                         className={`text-xs font-mono font-bold ${
-                          isNeg ? 'text-red-400' : 'text-emerald-400'
+                          isNeg ? 'text-rose-600' : 'text-emerald-600'
                         }`}
                       >
                         {isNeg ? '' : '+'}
@@ -437,24 +432,24 @@ export const FaltasSobrasView: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-[11px] text-slate-400 pt-3 border-t border-slate-800 text-center">
+          <div className="text-[11px] text-slate-500 pt-3 border-t border-slate-100 text-center">
             Total de {gruposOrdenados.length} grupos mapeados na unidade
           </div>
         </div>
 
         {/* Gráfico 3: Distribuição de SKUs por Status (Rosca) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-5 shadow-sm shadow-blue-900/5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <PieIcon className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-extrabold text-blue-950 flex items-center gap-2">
+                <PieIcon className="w-4 h-4 text-amber-500" />
                 Acuracidade de Itens (SKUs)
               </h2>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 Contagem
               </span>
             </div>
-            <p className="text-xs text-slate-400 mb-2">
+            <p className="text-xs text-slate-500 mb-2">
               Proporção de itens sem divergência versus itens com falta ou sobra
             </p>
 
@@ -470,6 +465,8 @@ export const FaltasSobrasView: React.FC = () => {
                     innerRadius={45}
                     outerRadius={70}
                     paddingAngle={3}
+                    stroke="#ffffff"
+                    strokeWidth={2}
                   >
                     {dadosStatusRosca.map((entry, index) => (
                       <Cell key={`slice-${index}`} fill={entry.fill} />
@@ -477,10 +474,10 @@ export const FaltasSobrasView: React.FC = () => {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#cbd5e1',
                       borderRadius: '12px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       fontSize: '12px',
                     }}
                     formatter={(val: any) => [`${val} SKUs`, 'Quantidade']}
@@ -488,55 +485,55 @@ export const FaltasSobrasView: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-lg font-black text-white font-mono">{acuracidadePct}%</span>
+                <span className="text-lg font-black text-blue-950 font-mono">{acuracidadePct}%</span>
                 <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Acuracidade</span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-slate-800 text-xs">
-            <div className="flex items-center justify-between text-slate-300">
+          <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+            <div className="flex items-center justify-between text-slate-700">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                 Itens 100% Corretos
               </span>
-              <span className="font-mono font-bold text-blue-400">{data.itens_ok} SKUs</span>
+              <span className="font-mono font-bold text-blue-800">{data.itens_ok} SKUs</span>
             </div>
-            <div className="flex items-center justify-between text-slate-300">
+            <div className="flex items-center justify-between text-slate-700">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                 Itens em Falta
               </span>
-              <span className="font-mono font-bold text-red-400">{data.itens_falta} SKUs</span>
+              <span className="font-mono font-bold text-rose-600">{data.itens_falta} SKUs</span>
             </div>
-            <div className="flex items-center justify-between text-slate-300">
+            <div className="flex items-center justify-between text-slate-700">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                 Itens em Sobra
               </span>
-              <span className="font-mono font-bold text-emerald-400">{data.itens_sobra} SKUs</span>
+              <span className="font-mono font-bold text-emerald-600">{data.itens_sobra} SKUs</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* 4. Tabela Interativa de Top Faltas & Top Sobras */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+      <div className="bg-white border border-blue-200/90 rounded-2xl p-5 md:p-6 shadow-sm shadow-blue-900/5 space-y-4">
         {/* Sub-Header da Tabela */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           {/* Abas Alternadoras Faltas / Sobras */}
-          <div className="flex items-center p-1 bg-slate-950 border border-slate-800 rounded-xl">
+          <div className="flex items-center p-1 bg-slate-100 border border-slate-200 rounded-xl">
             <button
               onClick={() => setActiveTab('faltas')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'faltas'
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-rose-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <TrendingDown className="w-4 h-4" />
+              <TrendingDown className="w-4 h-4 text-rose-600" />
               <span>Top Faltas (Perdas)</span>
-              <span className="px-1.5 py-0.2 bg-red-500/30 text-red-300 rounded text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded text-[10px] font-mono">
                 {data.top_faltas?.length || 0}
               </span>
             </button>
@@ -545,13 +542,13 @@ export const FaltasSobrasView: React.FC = () => {
               onClick={() => setActiveTab('sobras')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'sobras'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-emerald-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <TrendingUp className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
               <span>Top Sobras (Excedentes)</span>
-              <span className="px-1.5 py-0.2 bg-emerald-500/30 text-emerald-300 rounded text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-700 rounded text-[10px] font-mono">
                 {data.top_sobras?.length || 0}
               </span>
             </button>
@@ -566,14 +563,14 @@ export const FaltasSobrasView: React.FC = () => {
                 placeholder="Buscar produto ou grupo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
             <select
               value={selectedGrupo}
               onChange={(e) => setSelectedGrupo(e.target.value)}
-              className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-amber-500 transition-colors"
+              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-amber-500 transition-colors"
             >
               {listaGrupos.map((grp) => (
                 <option key={grp} value={grp}>
@@ -585,9 +582,9 @@ export const FaltasSobrasView: React.FC = () => {
         </div>
 
         {/* Container da Tabela */}
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-slate-800">
+            <thead className="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Produto (SKU)</th>
@@ -600,7 +597,7 @@ export const FaltasSobrasView: React.FC = () => {
                 <th className="py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-slate-100 font-medium">
               {tabelaFiltrada.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-slate-400">
@@ -613,40 +610,40 @@ export const FaltasSobrasView: React.FC = () => {
                   return (
                     <tr
                       key={idx}
-                      className="hover:bg-slate-800/40 transition-colors group"
+                      className="hover:bg-slate-50 transition-colors group"
                     >
-                      <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                      <td className="py-3 px-4 text-slate-100 font-semibold max-w-xs truncate" title={item.produto}>
+                      <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">{idx + 1}</td>
+                      <td className="py-3 px-4 text-slate-900 font-semibold max-w-xs truncate" title={item.produto}>
                         {item.produto}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                           {item.grupo}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-slate-300">
+                      <td className="py-3 px-4 text-right font-mono text-slate-700">
                         {formatNumber(item.fisico, 0)}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-slate-300">
+                      <td className="py-3 px-4 text-right font-mono text-slate-700">
                         {formatNumber(item.disponivel, 0)}
                       </td>
                       <td
                         className={`py-3 px-4 text-right font-mono font-bold ${
-                          item.diferenca_qtd < 0 ? 'text-red-400' : 'text-emerald-400'
+                          item.diferenca_qtd < 0 ? 'text-rose-600' : 'text-emerald-600'
                         }`}
                       >
                         {item.diferenca_qtd > 0 ? `+${formatNumber(item.diferenca_qtd, 0)}` : formatNumber(item.diferenca_qtd, 0)}
                       </td>
                       <td
                         className={`py-3 px-4 text-right font-mono ${
-                          item.pct_diferenca < 0 ? 'text-red-400' : 'text-emerald-400'
+                          item.pct_diferenca < 0 ? 'text-rose-600' : 'text-emerald-600'
                         }`}
                       >
                         {item.pct_diferenca > 0 ? `+${formatNumber(item.pct_diferenca, 1)}%` : `${formatNumber(item.pct_diferenca, 1)}%`}
                       </td>
                       <td
                         className={`py-3 px-4 text-right font-mono font-bold ${
-                          isFalta ? 'text-red-400' : 'text-emerald-400'
+                          isFalta ? 'text-rose-600' : 'text-emerald-600'
                         }`}
                       >
                         {item.valor_diferenca > 0 ? `+${formatBRL(item.valor_diferenca)}` : formatBRL(item.valor_diferenca)}
@@ -655,8 +652,8 @@ export const FaltasSobrasView: React.FC = () => {
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
                             isFalta
-                              ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                              : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           }`}
                         >
                           {isFalta ? (
@@ -678,7 +675,7 @@ export const FaltasSobrasView: React.FC = () => {
           </table>
         </div>
 
-        <div className="text-right text-[11px] text-slate-400 pt-1">
+        <div className="text-right text-[11px] text-slate-500 pt-1">
           Exibindo os maiores impactos de {activeTab === 'faltas' ? 'Faltas' : 'Sobras'}
         </div>
       </div>
